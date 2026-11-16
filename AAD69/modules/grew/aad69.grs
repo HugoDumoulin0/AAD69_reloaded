@@ -1,0 +1,427 @@
+% =============================================================================================
+% AAD69 — l'étape 2 en Grew : de l'arbre de Stanza (Universal Dependencies) aux énoncés.
+%
+% Les paquets suivent les étapes de l'analyse du manuel (Haroche & Pêcheux 1972, annexe 1, p. 53)
+% et ses règles (§ 3.13 à 3.1426). Deux passes :
+%   « normaliser » (avant les anaphores) : corriger la forme de l'arbre (§ 3.13 : ordre canonique) ;
+%   « main » (après les anaphores) : prédicats, syntagmes figés, modalités et complétives,
+%   arguments profonds.
+% Arêtes profondes (étiquette E:…), lues par aad69/extraction_grew.py :
+%   E:suj, E:sujc       sujet, autre terme d'un sujet coordonné
+%   E:comp, E:compc     complément, autre terme d'un complément coordonné
+%   E:attrc             autre adjectif d'un attribut coordonné
+%   E:quant             nom de quantité -> nom compté (« toutes sortes de quadrupèdes »)
+%   E:IMP E:QUE E:PRG1 E:PRG2   jonction entre deux énoncés (manuel § 3.1422 ; connecteurs 05,
+%                       11, 06, 07 de l'annexe 1)
+% Traits posés sur les nœuds : pred (verbe | attribut), S (N1 | N2 : place de l'image S de la
+% proposition dépendante), sujet_vide (X), copule (implicite), locution, emphase, fige.
+% Docs : docs/grew.md. Décisions : G1 à G13 (docs/decisions.md).
+% =============================================================================================
+
+
+% ---------------------------------------------------------------------------------------------
+% PASSE 1, avant les anaphores
+% ---------------------------------------------------------------------------------------------
+
+% Corrections de l'analyse : ce que Stanza note autrement que nos conventions, ou se trompe.
+package corrections {
+
+  % E2-25 : « être », « avoir » plein étiqueté AUX (« la lettre était pour la dame »).
+  rule aux_plein {
+    pattern { V [upos=AUX]; V -[1=nsubj|obj|obl|iobj]-> X }
+    without { * -[1=aux|cop]-> V }
+    commands { V.upos = VERB }
+  }
+
+  % E2-14 R2 : adverbe + « de » = locution prépositionnelle (« près du Roi », « loin du village »).
+  % Le nom est rattaché au verbe ; l'adverbe devient sa préposition (même s'il était noté sujet,
+  % Alice, Stanza 1.6.1) : ce n'est pas un adverbe de manière.
+  rule locution_adverbiale {
+    pattern {
+      H [upos=VERB]; e: H -> X; X [upos=ADV];
+      f: X -[1=obl|nmod]-> N; N [upos=NOUN|PROPN|PRON];
+      N -[case]-> C; C [lemma="de"];
+    }
+    commands { del_edge f; add_edge H -[obl]-> N; N.locution = X.lemma; del_edge e; add_edge N -[case]-> X }
+  }
+
+  % G2 — « il » impersonnel (§ 3.1413 : « L'absence de sujet réel (il pleut, il s'agit de, il y a)
+  % est traduite par Ø » ; § 3.14221). UD : expl:subj. Les anaphores ignorent expl.
+  rule il_falloir {
+    pattern { V [lemma="falloir"]; e: V -[nsubj]-> I; I [upos=PRON, form="il"|"Il"] }
+    commands { del_edge e; add_edge V -[expl:subj]-> I }
+  }
+  rule il_s_agir {
+    pattern { V [lemma="agir"]; V -[1=expl|obj]-> S; S [lemma="se"|"soi"]; e: V -[nsubj]-> I; I [upos=PRON, form="il"|"Il"] }
+    commands { del_edge e; add_edge V -[expl:subj]-> I }
+  }
+  rule il_y_a {
+    pattern { V [lemma="avoir"]; V -> Y; Y [lemma="y"]; e: V -[nsubj]-> I; I [upos=PRON, form="il"|"Il"] }
+    commands { del_edge e; add_edge V -[expl:subj]-> I }
+  }
+  % « il semble que », « il convient de »… : seulement avec une complétive ou un sujet propositionnel
+  % (« Il ne semble pas le savoir » reste personnel).
+  rule il_verbe_completive (lex from "lexiques/impersonnels_verbes.lex") {
+    pattern { V [lemma=lex.lemme]; V -[1=ccomp|csubj]-> C; e: V -[nsubj]-> I; I [upos=PRON, form="il"|"Il"] }
+    commands { del_edge e; add_edge V -[expl:subj]-> I }
+  }
+  rule il_adjectif_completive (lex from "lexiques/impersonnels_adjectifs.lex") {
+    pattern { A [lemma=lex.lemme]; A -[cop]-> X; A -[1=ccomp|csubj|xcomp]-> C; e: A -[nsubj]-> I;
+              I [upos=PRON, form="il"|"Il"] }
+    commands { del_edge e; add_edge A -[expl:subj]-> I }
+  }
+
+  % G3 — pronom réfléchi noté objet : « nous nous interrogeons » -> verbe pronominal.
+  rule reflechi_objet {
+    pattern { V -[1=nsubj]-> S; S [upos=PRON, Person=1|2]; e: V -[1=obj|iobj]-> O; O [upos=PRON];
+              O.Person = S.Person; O.Number = S.Number; O << V }
+    commands { del_edge e; add_edge V -[expl:pv]-> O }
+  }
+
+  % G6 — ellipse du verbe dans un complément coordonné (annexe I, énoncés 23-26) : « il avait une
+  % trompette dans une main et dans l'autre un rouleau de parchemin ». L'analyseur coordonne
+  % « rouleau » à « main » ; signature : le terme coordonné, sans préposition, porte un groupe
+  % prépositionnel placé AVANT lui. On le rattache au verbe (objet), et le groupe aussi.
+  rule ellipse_coordination {
+    pattern {
+      V [upos=VERB]; V -[1=obl]-> M; M -[case]-> C1;
+      c: M -[conj]-> R; R [upos=NOUN|PROPN]; n: R -[1=nmod|obl]-> A; A -[case]-> C2; A << R;
+    }
+    without { R -[case]-> * }
+    commands { del_edge c; add_edge V -[obj]-> R; del_edge n; add_edge V -[obl:mod]-> A; R.ellipse = "oui" }
+  }
+}
+
+% G7 — phrases clivées (« C'est à cette urgence que nous nous adressons ») : rétablissement de
+% l'ordre canonique (manuel § 3.13 ; le livre, p. 75-76, en fait une emphase de la forme F).
+package clivees {
+  rule clivee_relatif {
+    pattern {
+      a: X -[advcl:cleft|acl:relcl]-> V; X -[cop]-> CP; X -[1=expl|nsubj]-> CE; CE [lemma="ce"|"cela"|"ça"];
+      r: V -[1=nsubj|obj|iobj|obl]-> R; R [PronType=Rel];
+    }
+    commands {
+      del_edge a; shift_in X ==> V;
+      add_edge f: V -> X; f.label = r.label;
+      del_node R; del_node CP; del_node CE; V.emphase = "oui";
+    }
+  }
+  rule clivee_que_preposition {
+    pattern {
+      a: X -[advcl:cleft]-> V; V -[mark]-> Q; Q [lemma="que"]; X -[cop]-> CP;
+      X -[1=expl|nsubj]-> CE; CE [lemma="ce"|"cela"|"ça"]; X -[case]-> P;
+    }
+    commands { del_edge a; shift_in X ==> V; add_edge V -[obl]-> X; del_node Q; del_node CP; del_node CE; V.emphase = "oui" }
+  }
+  rule clivee_que_objet {
+    pattern {
+      a: X -[advcl:cleft]-> V; V -[mark]-> Q; Q [lemma="que"]; X -[cop]-> CP;
+      X -[1=expl|nsubj]-> CE; CE [lemma="ce"|"cela"|"ça"]; X [upos=NOUN|PROPN|PRON];
+    }
+    without { X -[case]-> * }
+    without { V -[obj]-> * }
+    commands { del_edge a; shift_in X ==> V; add_edge V -[obj]-> X; del_node Q; del_node CP; del_node CE; V.emphase = "oui" }
+  }
+}
+
+% G8 — noms de personnes : « M. Boris Vallaud » -> Boris Vallaud ; « Mme la ministre » -> ministre.
+package noms_propres {
+  rule titre (lex from "lexiques/titres.lex") {
+    pattern { T [lemma=lex.lemme]; e: T -[1=nmod|appos|flat]-> P; P [upos=PROPN|NOUN]; T << P }
+    without { P -[case]-> * }
+    without { T [titre] }
+    % le premier mot du nom (« Mme Clémentine Autain » : Clémentine, puis Autain lui est rattaché)
+    without { T -[1=nmod|appos|flat]-> P2; P2 [upos=PROPN|NOUN]; T << P2; P2 << P }
+    commands { del_edge e; shift T ==> P; add_edge P -[flat:title]-> T; T.titre = "oui" }
+  }
+  rule nom_en_plusieurs_mots {
+    pattern { P [upos=PROPN]; e: P -[flat:name|flat]-> Q; P << Q }
+    without { Q [absorbe] }
+    without { P -[flat:name|flat]-> Q2; Q2 [!absorbe]; Q2 << Q }
+    commands { P.lemma = P.lemma + " " + Q.form; Q.absorbe = "oui" }
+  }
+}
+
+strat normaliser { Seq(Onf(corrections), Onf(clivees), Onf(noms_propres)) }
+
+
+% ---------------------------------------------------------------------------------------------
+% PASSE 2, après les anaphores
+% ---------------------------------------------------------------------------------------------
+
+% Étape 3 du manuel : les propositions. Un prédicat : un verbe, ou un mot qui a une copule.
+package predicats {
+  rule verbe { pattern { V [upos=VERB] } without { V [pred] } commands { V.pred = "verbe" } }
+  rule attribut {
+    pattern { X [upos<>VERB]; X -[cop]-> C }
+    without { X [pred] }
+    commands { X.pred = "attribut" }
+  }
+  % G9 — attribut sans copule : « rendre obligatoire la prime » (xcomp adjectif) -> la prime est
+  % obligatoire, énoncé modalisé par « rendre » (PRG2, voir modalites).
+  rule attribut_implicite {
+    pattern { H [upos=VERB]; H -[xcomp]-> A; A [upos=ADJ]; H -[obj]-> O }
+    without { A -[cop]-> * }
+    without { A [pred] }
+    commands { A.pred = "attribut"; A.copule = "implicite" }
+  }
+}
+
+% Étape 4 : relevé des syntagmes figés (manuel, annexe 1 ; p. 52, note 1 : « il aurait été
+% préférable d'analyser "mettre en danger" comme un syntagme figé »). G10 : verbe support (UD
+% obj:lvc : « avoir besoin », « faire preuve », « prendre acte ») = un seul prédicat ; le
+% complément du nom devient complément du prédicat (« avoir besoin de X »).
+package figes {
+  rule verbe_support {
+    pattern { V [pred="verbe"]; e: V -[obj:lvc|compound:lvc]-> N }
+    without { V [fige] }
+    commands { V.lemma = V.lemma + " " + N.lemma; V.fige = "oui"; del_edge e; add_edge V -[fixed]-> N;
+               shift_out N =[1=nmod|acl|xcomp]=> V }
+  }
+  % « nous avions besoin de prendre la parole » : (NOUS AVOIR BESOIN Ø Ø) PRG1 (NOUS PRENDRE * L PAROLE)
+  rule fige_infinitif {
+    pattern { V [fige]; e: V -[acl|nmod]-> D; D [VerbForm=Inf] }
+    commands { del_edge e; add_edge V -[xcomp]-> D }
+  }
+}
+
+% Étape 5 : modalités extérieures au système affirmation/négation et complétives (§ 3.1422).
+package modalites {
+
+  % § 3.14221 — construction impersonnelle : (S CONVENIR Ø Ø) IMP (X DÉCIDER Ø Ø) ;
+  % (S ÊTRE * POSSIBLE) IMP (JULES VENIR À PARIS). Connecteur 05.
+  rule impersonnelle {
+    pattern { H [pred]; H -[expl:subj]-> I; H -[1=ccomp|csubj|xcomp]-> D; D [pred] }
+    without { H -[E:IMP]-> D }
+    commands { add_edge H -[E:IMP]-> D; H.S = "N1" }
+  }
+
+  % « Il paraît impensable que nous ne fassions rien » : la complétive dépend de l'adjectif
+  % complément du verbe impersonnel -> (S PARAÎTRE * IMPENSABLE) IMP (NOUS FAIRE * RIEN)
+  rule impersonnelle_par_adjectif {
+    pattern { H [pred]; H -[expl:subj]-> I; H -[xcomp]-> A; A [upos=ADJ]; A -[1=ccomp|csubj]-> D; D [pred] }
+    without { H -[E:IMP]-> D }
+    commands { add_edge H -[E:IMP]-> D; H.S = "N1" }
+  }
+
+  % § 3.1413 — proposition sujet : « (le fait) que Pierre aime Marie étonne Jean »
+  % -> (Ø S ÉTONNER * Ø JEAN) (que) (Ø PIERRE AIMER * Ø MARIE).
+  rule proposition_sujet {
+    pattern { H [pred]; H -[1=csubj]-> D; D [pred] }
+    without { H -[expl:subj]-> * }
+    without { H -[E:QUE]-> D }
+    commands { add_edge H -[E:QUE]-> D; H.S = "N1" }
+  }
+
+  % § 3.142221 — construction personnelle QUE + PHRASE : (JEAN ASSURER * S) QUE (…). Connecteur 11.
+  rule completive {
+    pattern { H [pred]; H -[ccomp]-> D; D [pred, VerbForm=Fin] }
+    without { H -[expl:subj]-> * }
+    without { H -[E:QUE]-> D }
+    commands { add_edge H -[E:QUE]-> D; H.S = "N2" }
+  }
+  rule completive_que {
+    pattern { H [pred]; H -[ccomp]-> D; D [pred]; D -[mark]-> M; M [lemma="que"] }
+    without { H -[expl:subj]-> * }
+    without { H -[E:QUE]-> D }
+    commands { add_edge H -[E:QUE]-> D; H.S = "N2" }
+  }
+
+  % § 3.1422222 — modalité pragmatique de second type : le sujet de l'infinitif est le complément du
+  % verbe modalisant : (PIERRE ÉCOUTER * L TRAIN) PRG2 (L TRAIN PASSER Ø Ø). Connecteur 07.
+  rule prg2 (lex from "lexiques/prg2.lex") {
+    pattern { H [pred="verbe", lemma=lex.lemme]; H -[1=xcomp|ccomp]-> D; D [pred, VerbForm=Inf]; H -[1=obj|iobj]-> O }
+    without { H -[expl:subj]-> * }
+    without { D -[1=nsubj]-> * }
+    without { H -[E:PRG2]-> D }
+    commands { add_edge H -[E:PRG2]-> D; add_edge D -[E:suj]-> O }
+  }
+  rule prg2_complement_a (lex from "lexiques/prg2.lex") {
+    pattern { H [pred="verbe", lemma=lex.lemme]; H -[1=xcomp|ccomp]-> D; D [pred, VerbForm=Inf];
+              H -[1=obl]-> O; O -[case]-> C; C [lemma="à"] }
+    without { H -[1=obj|iobj]-> * }
+    without { H -[expl:subj]-> * }
+    without { D -[1=nsubj]-> * }
+    without { H -[E:PRG2]-> D }
+    commands { add_edge H -[E:PRG2]-> D; add_edge D -[E:suj]-> O }
+  }
+  % sans complément exprimé : (ANDRÉ ENCOURAGER * X) PRG2 (X PARIER Ø Ø)
+  rule prg2_sans_complement (lex from "lexiques/prg2.lex") {
+    pattern { H [pred="verbe", lemma=lex.lemme]; H -[1=xcomp|ccomp]-> D; D [pred, VerbForm=Inf] }
+    without { H -[1=obj|iobj]-> * }
+    without { H -[1=obl]-> O; O -[case]-> C; C [lemma="à"] }
+    without { H -[expl:subj]-> * }
+    without { D -[1=nsubj]-> * }
+    without { H -[E:PRG2]-> D }
+    commands { add_edge H -[E:PRG2]-> D; D.sujet_vide = "X"; H.objet_vide = "X" }
+  }
+  % G9 — attribut sans copule : « rendre obligatoire la prime » -> (… RENDRE Ø Ø) PRG2 (L PRIME ÊTRE * OBLIGATOIRE)
+  rule prg2_attribut {
+    pattern { H [pred="verbe"]; H -[xcomp]-> A; A [copule="implicite"]; H -[obj]-> O }
+    without { H -[E:PRG2]-> A }
+    commands { add_edge H -[E:PRG2]-> A; add_edge A -[E:suj]-> O }
+  }
+
+  % § 3.1422221 — modalité pragmatique de premier type : le sujet de l'infinitif est celui du verbe
+  % modalisant : (JULES POUVOIR Ø Ø) PRG1 (JULES VENIR À PARIS). Connecteur 06.
+  rule prg1 {
+    pattern { H [pred]; H -[1=xcomp|ccomp]-> D; D [pred, VerbForm=Inf] }
+    without { H -[expl:subj]-> * }
+    without { H -[E:PRG2|E:IMP|E:QUE]-> D }
+    without { H -[E:PRG1]-> D }
+    commands { add_edge H -[E:PRG1]-> D }
+  }
+}
+
+% G13 — énoncé latent (annexe I, 22 et 26 ; opération 4, LG8 du linguiste) : un objet tenu ou
+% possédé à un endroit nommé dans la même proposition est à cet endroit. Même condition que LG8b :
+% l'objet n'est pas le sujet du verbe (« un plateau était posé sur une table » : rien de latent).
+package latents {
+  % chaque objet avec SON lieu : le plus proche, sans autre objet ni autre lieu entre les deux
+  % (« une trompette dans une main et dans l'autre un rouleau » : trompette-main, rouleau-autre)
+  rule objet_puis_lieu (lex from "lexiques/verbes_de_tenue.lex") {
+    pattern { V [lemma=lex.lemme]; V -[obj]-> O; O [upos=NOUN|PROPN]; V -[1=obl]-> L; L [upos=NOUN|PROPN|PRON];
+              L -[case]-> C; C [lemma="dans"|"sur"|"sous"|"entre"|"contre"]; O << L }
+    without { V -[1=obj|obl]-> X; O << X; X << L }
+    without { O -[E:latent]-> L }
+    commands { add_edge O -[E:latent]-> L }
+  }
+  rule lieu_puis_objet (lex from "lexiques/verbes_de_tenue.lex") {
+    pattern { V [lemma=lex.lemme]; V -[obj]-> O; O [upos=NOUN|PROPN]; V -[1=obl]-> L; L [upos=NOUN|PROPN|PRON];
+              L -[case]-> C; C [lemma="dans"|"sur"|"sous"|"entre"|"contre"]; L << O; O [ellipse] }
+    without { V -[1=obj|obl]-> X; L << X; X << O }
+    without { V -[1=obl]-> L2; L2 -[case]-> C2; O << L2 }
+    without { O -[E:latent]-> L }
+    commands { add_edge O -[E:latent]-> L }
+  }
+}
+
+% Le sujet non assigné d'un infinitif (§ 3.14221 : « X représente le sujet non assigné du verbe
+% décider »), après les modalités.
+package sujets_vides {
+  rule infinitif_impersonnel {
+    pattern { H -[E:IMP|E:QUE]-> D; D [VerbForm=Inf] }
+    without { D -[1=nsubj|csubj]-> * }
+    without { D [sujet_vide] }
+    commands { D.sujet_vide = "X" }
+  }
+}
+
+% Les arguments profonds de chaque prédicat.
+package arguments {
+
+  rule sujet_direct {
+    pattern { P [pred]; P -[1=nsubj|csubj]-> S; S [upos=NOUN|PROPN|PRON|NUM] }
+    without { P -[E:suj]-> S }
+    commands { add_edge P -[E:suj]-> S }
+  }
+
+  % verbes coordonnés, PRG1 (et xcomp) : le sujet du verbe tête (« était enchaîné et encadré »,
+  % « le travail doit payer »)
+  rule sujet_herite {
+    pattern { P1 [pred]; P2 [pred]; P1 -[conj|xcomp|E:PRG1]-> P2; P1 -[E:suj]-> S }
+    without { P2 -[E:suj]-> * }
+    without { P2 -[1=nsubj|csubj]-> * }
+    without { P2 [sujet_vide] }
+    commands { add_edge P2 -[E:suj]-> S }
+  }
+
+  % participe détaché : « une foule les entourait, composée de… »
+  rule sujet_participe_detache {
+    pattern { P1 [pred]; P2 [pred, VerbForm=Part]; P1 -[advcl]-> P2; P1 -[E:suj]-> S }
+    without { P2 -[E:suj]-> * }
+    without { P2 -[1=nsubj|csubj]-> * }
+    commands { add_edge P2 -[E:suj]-> S }
+  }
+
+  % G11 — infinitif introduit par une préposition (§ 3.14223, 3) : « Paul court pour attraper le
+  % train » -> (PAUL COURIR Ø Ø) POUR QUE (PAUL ATTRAPER * L TRAIN) : même sujet. Seulement après un
+  % verbe : « La parole est à M. X, pour soutenir l'amendement » (ce n'est pas « la parole » qui soutient).
+  rule sujet_infinitif_prepositionnel {
+    pattern { P1 [pred="verbe"]; P2 [pred, VerbForm=Inf]; P1 -[advcl]-> P2; P2 -[mark]-> M; M [upos=ADP]; P1 -[E:suj]-> S }
+    without { P2 -[E:suj]-> * }
+    without { P2 -[1=nsubj|csubj]-> * }
+    commands { add_edge P2 -[E:suj]-> S }
+  }
+
+  % participe épithète : « une foule composée de… » -> le nom
+  rule sujet_participe_epithete {
+    pattern { N -[acl]-> P; P [pred, VerbForm=Part] }
+    without { P -[E:suj]-> * }
+    without { P -[1=nsubj|csubj]-> * }
+    commands { add_edge P -[E:suj]-> N }
+  }
+
+  % infinitif complément d'un nom : « Alice eut une envie de les manger » -> Alice
+  rule sujet_infinitif_du_nom {
+    pattern { N -[acl]-> P; P [pred, VerbForm=Inf]; G [pred]; G -> N; G -[E:suj]-> S }
+    without { P -[E:suj]-> * }
+    without { P -[1=nsubj|csubj]-> * }
+    commands { add_edge P -[E:suj]-> S }
+  }
+
+  % « il paraît impensable que… », « elle semble fatiguée » : l'adjectif complément d'un verbe
+  % attributif est son complément (PP = *), comme l'attribut d'une copule.
+  rule complement_attributif {
+    pattern { P [pred="verbe"]; P -[xcomp]-> A; A [upos=ADJ] }
+    without { A [pred] }
+    without { P -[E:comp]-> A }
+    commands { add_edge P -[E:comp]-> A }
+  }
+
+  rule complement {
+    pattern { P [pred="verbe"]; P -[1=obj|iobj|obl|nmod]-> C }
+    without { P -[E:comp]-> C }
+    commands { add_edge P -[E:comp]-> C }
+  }
+
+  % pronom adverbial rétabli (« y » -> à jardin, « en » -> de mer : trait Preposition, AN6)
+  rule complement_adverbial {
+    pattern { P [pred="verbe"]; P -> C; C [Preposition] }
+    without { P -[E:comp]-> C }
+    commands { add_edge P -[E:comp]-> C }
+  }
+
+  % nom de quantité (E2-17) : « toutes sortes de quadrupèdes » -> le nom compté porte la suite
+  rule nom_quantifie {
+    pattern {
+      C [lemma="sorte"|"espèce"|"genre"|"foule"|"multitude"|"nombre"|"quantité"|"tas"|"plupart"|"série"|"masse"];
+      C -[nmod]-> Q; Q [upos=NOUN|PROPN]; Q -[case]-> D; D [lemma="de"];
+    }
+    without { Q -[det]-> * }
+    without { C -[E:quant]-> Q }
+    commands { add_edge C -[E:quant]-> Q }
+  }
+
+  % coordination : les autres termes (séparés, LG6 ; l'ensemble de 1969 n'est pas fait ici)
+  rule sujet_coordonne {
+    pattern { P -[E:suj|E:sujc]-> S1; S1 -[conj]-> S2; S2 [upos=NOUN|PROPN|PRON|NUM] }
+    without { S2 [pred] }
+    without { P -[E:sujc]-> S2 }
+    commands { add_edge P -[E:sujc]-> S2 }
+  }
+  rule complement_coordonne {
+    pattern { P -[E:comp|E:compc]-> C1; C1 -[conj]-> C2; C2 [upos=NOUN|PROPN|PRON|NUM] }
+    without { C2 [pred] }
+    without { C2 [ellipse] }
+    without { P -[E:compc]-> C2 }
+    commands { add_edge P -[E:compc]-> C2 }
+  }
+  rule complement_coordonne_quantifie {
+    pattern { P -[E:comp]-> C1; C1 -[E:quant]-> Q; Q -[conj]-> C2; C2 [upos=NOUN|PROPN|PRON|NUM] }
+    without { C2 [pred] }
+    without { P -[E:compc]-> C2 }
+    commands { add_edge P -[E:compc]-> C2 }
+  }
+  rule attribut_coordonne {
+    pattern { X [pred="attribut"]; X -[conj]-> Y; Y [upos=ADJ|NOUN|PROPN] }
+    without { Y [pred] }
+    without { X -[E:attrc]-> Y }
+    commands { add_edge X -[E:attrc]-> Y }
+  }
+}
+
+strat main {
+  Seq(Onf(corrections), Onf(clivees), Onf(noms_propres),
+      Onf(predicats), Onf(figes), Onf(modalites), Onf(latents), Onf(sujets_vides), Onf(arguments))
+}
