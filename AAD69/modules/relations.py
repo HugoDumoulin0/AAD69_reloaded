@@ -85,18 +85,21 @@ def notation_1969(lien: Lien) -> str | None:
         return "alpha"   # chap. II, p. 82 : Ève donne une pomme ∝ Ève donne à Adam ;
                          # α : opérateur de l'ensemble ψ (livre, pp. 94-95)
     if lien.type == INFINITIF_DU_NOM:
-        return "phi_alpha"    # annexe I : 32 φα 34 ; l'indice de φα est la lettre α,
-                              # pas un numéro de position : il n'y a pas de φ6 dans le
-                              # livre ; φα = relation de position dans la séquence (p. 115)
+        return "phi6"    # annexe I : 32 φ6 34 (table des relations, p. 115) ; φ6
+                         # n'est pas défini dans la liste des connexions (p. 115) ni
+                         # dans l'annexe V ; d'après 32 (« Alice avoir une envie ») et
+                         # 34 (« Alice manger les tartes »), il relie un énoncé de nom
+                         # au prédicat que ce nom recouvre (« envie de manger ») ;
+                         # l'équivalent 1972 est le connecteur 11 (que)
     if lien.type == ORDRE:
         return "phi_alpha"  # livre, pp. 60-61 : relation d'ordre entre les énoncés dominés
                            # directement par un même énoncé
     if lien.type == CONSEQUENCE:
-        return "phi5"
+        return "phi5"    # relation de conséquence (si…que, au point…que), annexe I, p. 115
     if lien.type == JONCTION:      # pas d'opérateur en 1969 : pas de notation
         # NB : IMP, PRG1, PRG2, SPE et que sont des connecteurs du manuel 1972
         # (annexe 2, p. 54 : 05, 06, 07, 08, 11) ; le livre de 1969 ne les note
-        # pas 
+        # pas
         return None
     # Un marqueur sans opérateur attesté dans l'annexe I (la virgule, « ou »,
     # le « que » de subordination…) n'est pas noté en 1969 : on ne crée rien.
@@ -385,7 +388,8 @@ def construire_liens(phrases: list[Phrase], ancres: list[tuple[Enonce, Ancrage]]
             for variante in derives.get(lien.droit, []):
                 liens.append(Lien(lien.gauche, lien.type, variante, lien.marqueur))
 
-    # 7. Relie l'énoncé initial du discours à l'énoncé principal de chaque phrase suivante.
+    # 7. Relie l'énoncé principal de la première phrase à l'énoncé principal
+    #    de chaque phrase suivante (annexe I : 1 φ2 7, 1 φ2 17, 1 φ2 18).
     racines = []
     for p in phrases:
         racine = next((m.id for m in p.mots.values() if m.tete == 0), None)
