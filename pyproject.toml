@@ -1,0 +1,31 @@
+[project]
+name = "aad69"
+version = "0.1.0"
+requires-python = ">=3.10"
+# Le calcul (AAD69/modules/) n'a besoin d'aucune bibliothèque externe.
+dependencies = []
+
+[project.optional-dependencies]
+# Extras facultatifs par usage ; plusieurs groupes peuvent être installés ensemble.
+interface = ["flask>=3.0"]
+# textes bruts ; puis une fois : python -c "import stanza; stanza.download('fr')"
+analyse = ["stanza>=1.15"]
+llm = ["python-dotenv>=1.0"]
+# étape 2, extracteur principal grewpy + le moteur OCaml grewpy_backend (opam)
+grew = ["grewpy>=0.7.1"]
+tests = ["pytest"]
+
+[tool.setuptools]
+# Noms des paquets importés par le code ; leurs dossiers source sont indiqués ci-dessous.
+packages = ["aad69", "interface"]
+# `aad69` correspond à AAD69/modules/ ; `interface` correspond à AAD69/interface/.
+package-dir = {aad69 = "AAD69/modules", interface = "AAD69/interface"}
+
+[tool.setuptools.package-data]
+# Les fichiers de règles Grew et les gabarits sont distribués avec leur paquet Python.
+interface = ["templates/*.html", "static/**/*"]
+aad69 = ["grew/*.grs", "grew/lexiques/*.lex"]
+
+[tool.pytest.ini_options]
+pythonpath = ["AAD69/modules"]
+testpaths = ["tests"]
