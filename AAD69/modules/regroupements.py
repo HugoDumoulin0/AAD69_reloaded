@@ -1,7 +1,7 @@
 """Étape 5 bis — Regroupement hiérarchique de relations à partir des zones de similitude.
 
 NB : ni le livre (1969) ni le manuel (1972) ne définissent de regroupement hiérarchique :
-complément personnel, construit sur deux notions du manuel — la proximité entre deux
+complément personnel, construit sur deux notions du manuel, la proximité entre deux
 relations, « estimée par la comparaison du contenu des cases des huit groupes
 morpho-syntaxiques des deux énoncés «gauches» (A) et (C) d'une part, et des deux
 énoncés «droits» (B) et (D) d'autre part » (1972, p. 44), ici le score de zone de

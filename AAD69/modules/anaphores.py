@@ -65,7 +65,7 @@ import copy
 from dataclasses import dataclass, field, replace
 
 from .conllu import Mot, Phrase
-from .extraction import lemme_nominal, nom_quantifie, sujet
+from .commun import lemme_nominal, nom_quantifie, sujet
 
 # Nombre maximal de phrases précédentes où chercher un antécédent.
 PORTEE = 2

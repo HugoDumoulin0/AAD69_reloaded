@@ -341,13 +341,13 @@ def creer_app(mode_developpement: bool = False) -> Flask:
     def linguiste():
         """Affiche les lectures du linguiste et les décisions à vérifier."""
         if not LINGUISTE_DISPONIBLE:
-            etat().dire("info", "Partie LLM indisponible : linguiste.py n'est pas publié.")
+            etat().dire("info", "Partie linguiste indisponible dans cette installation.")
             return redirect(url_for("corpus"))
         try:
             from aad69.mistral import ErreurMistral
         except ModuleNotFoundError as erreur:
             if erreur.name and erreur.name.endswith(".mistral"):
-                etat().dire("info", "Partie LLM indisponible : mistral.py n'est pas publié.")
+                etat().dire("info", "Module Mistral indisponible dans cette installation.")
                 return redirect(url_for("corpus"))
             raise
         from aad69.linguiste import RELATIONS_PERMISES, decrire, phrase_lue
@@ -396,13 +396,13 @@ def creer_app(mode_developpement: bool = False) -> Flask:
     def linguiste_lancer():
         """Lance la lecture LLM des phrases du corpus."""
         if not LINGUISTE_DISPONIBLE:
-            etat().dire("info", "Partie LLM indisponible : linguiste.py n'est pas publié.")
+            etat().dire("info", "Partie linguiste indisponible dans cette installation.")
             return redirect(url_for("corpus"))
         try:
             from aad69.mistral import ErreurMistral
         except ModuleNotFoundError as erreur:
             if erreur.name and erreur.name.endswith(".mistral"):
-                etat().dire("info", "Partie LLM indisponible : mistral.py n'est pas publié.")
+                etat().dire("info", "Module Mistral indisponible dans cette installation.")
                 return redirect(url_for("corpus"))
             raise
         if not etat().phrases:
@@ -423,7 +423,7 @@ def creer_app(mode_developpement: bool = False) -> Flask:
     def linguiste_decision():
         """Enregistre l'acceptation ou le refus d'une décision proposée."""
         if not LINGUISTE_DISPONIBLE:
-            etat().dire("info", "Partie linguiste indisponible : linguiste.py n'est pas publié.")
+            etat().dire("info", "Partie linguiste indisponible dans cette installation.")
             return redirect(url_for("corpus"))
         choix = request.form.get("choix")
         if choix not in ("accepter", "refuser"):
@@ -440,7 +440,7 @@ def creer_app(mode_developpement: bool = False) -> Flask:
     def linguiste_corriger():
         """Enregistre une correction manuelle d'une décision du linguiste."""
         if not LINGUISTE_DISPONIBLE:
-            etat().dire("info", "Partie linguiste indisponible : linguiste.py n'est pas publié.")
+            etat().dire("info", "Partie linguiste indisponible dans cette installation.")
             return redirect(url_for("corpus"))
         discours, cle = request.form.get("discours", ""), request.form.get("cle", "")
         try:

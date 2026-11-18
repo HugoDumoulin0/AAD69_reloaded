@@ -43,7 +43,7 @@ R5. 1972 : « dépendance possible » = au moins une origine de l'un commande un
     de l'autre. Pas de degré : le manuel dit que ce calcul est « actuellement à l'étude ».
 R6. Les dépendances se calculent sur le graphe qu'on fournit (Dependances). Si ce graphe est
     partiel (ex. tableau p. 51 du manuel), le résultat l'est aussi.
-Journal complet : docs/decisions.md
+
 """
 
 from __future__ import annotations

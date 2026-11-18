@@ -14,7 +14,7 @@ ré-exportent sous le même nom, pour ne rien casser).
 """
 
 #  Étape 2 : extraction des énoncés
-# Utilisées par extraction.py (et, pour NOMS_LOCUTION et NOMINALISATIONS, par extraction_grew.py).
+# Utilisées par commun.py (lemmes, noms de quantité) et extraction_grew.py (locutions, nominalisations).
 
 # Noms qui forment une locution prépositionnelle avec « de » : « au milieu de la salle »
 # -> PP = « au milieu de », N2/3 = salle (et non : N2/3 = milieu, puis « milieu ε de salle »).

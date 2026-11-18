@@ -8,8 +8,8 @@ celui de N2/3 (le complément). « Le facteur perdit une lettre » donne D1 = L 
 D2 = U (indéfini singulier). Ce module calcule ces codes ; il remplit aussi la case ADV
 (l'adverbe du verbe).
 
-Il est appelé par l'extraction (extraction.py et extraction_grew.py) pour chaque nom qui va dans
-une case N1 ou N2/3.
+Il est appelé par l'extraction (extraction_grew.py) pour chaque nom qui va dans une case N1 ou
+N2/3.
 
 Les codes
 ---------

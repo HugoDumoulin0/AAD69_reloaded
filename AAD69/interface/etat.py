@@ -184,7 +184,7 @@ class Etat:
         """
         self.linguiste_tente = True
         if not LINGUISTE_DISPONIBLE:
-            raise RuntimeError("Partie LLM indisponible : linguiste.py n'est pas publié.")
+            raise RuntimeError("Partie linguiste indisponible dans cette installation.")
         try:
             from aad69.linguiste import lire_discours
             from aad69.mistral import CACHE_PAR_DEFAUT
@@ -235,7 +235,7 @@ class Etat:
     def _lecture(self, discours: str) -> tuple[Lecture, list[Phrase]]:
         """Retrouve la lecture et les phrases d'un discours, ou signale l'absence de lecture."""
         if not LINGUISTE_DISPONIBLE:
-            raise RuntimeError("Partie LLM indisponible : linguiste.py n'est pas publié.")
+            raise RuntimeError("Partie linguiste indisponible dans cette installation.")
         from aad69.linguiste import Invalide
         if discours not in self.lectures:
             raise Invalide("discours sans lecture")
@@ -244,7 +244,7 @@ class Etat:
     def decider(self, discours: str, cle: str, action: str):
         """Accepte, refuse ou remet à vérifier une décision du linguiste."""
         if not LINGUISTE_DISPONIBLE:
-            raise RuntimeError("Partie LLM indisponible : linguiste.py n'est pas publié.")
+            raise RuntimeError("Partie linguiste indisponible dans cette installation.")
         from aad69.linguiste import changer_etat
         etats = {"accepter": "acceptee", "refuser": "refusee", "remettre": "a_verifier"}
         decision = changer_etat(self._lecture(discours)[0], cle, etats.get(action, action))
@@ -272,7 +272,7 @@ class Etat:
     def modifier_decision(self, discours: str, cle: str, **valeurs):
         """Corrige une décision du linguiste puis invalide les résultats en cache."""
         if not LINGUISTE_DISPONIBLE:
-            raise RuntimeError("Partie LLM indisponible : linguiste.py n'est pas publié.")
+            raise RuntimeError("Partie linguiste indisponible dans cette installation.")
         from aad69.linguiste import Invalide, modifier
         lecture, phrases = self._lecture(discours)
         if "antecedents" in valeurs and valeurs["antecedents"] is not None:
@@ -295,7 +295,7 @@ class Etat:
     def ajouter_decision(self, discours: str, sent_id: str, mot: int, antecedents):
         """Ajoute une décision d'anaphore manuelle à la lecture du discours."""
         if not LINGUISTE_DISPONIBLE:
-            raise RuntimeError("Partie LLM indisponible : linguiste.py n'est pas publié.")
+            raise RuntimeError("Partie linguiste indisponible dans cette installation.")
         from aad69.linguiste import ajouter
         lecture, phrases = self._lecture(discours)
         decision = ajouter(lecture, phrases, sent_id, mot, antecedents)

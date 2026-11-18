@@ -21,7 +21,7 @@ else:
     def appliquer_rattachements(phrases, lecture):
         """Sans module linguiste, conserve les phrases non corrigées."""
         if lecture is not None:
-            raise RuntimeError("Partie linguiste indisponible : linguiste.py n'est pas publié.")
+            raise RuntimeError("Partie linguiste indisponible dans cette installation.")
         return phrases
 
 RELATIONS_COMPLEMENTS = {"obj", "iobj", "obl", "nmod"}

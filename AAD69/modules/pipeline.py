@@ -45,12 +45,15 @@ from .reglages import Reglages
 from .relations import relier
 from .relations_domaines import Dependances, RelationDomaines, origines, tableau
 
-# linguiste.py (partie LLM, non publiée sur GitHub) peut être absent : sans lui, seul
-# `corpus_depuis_tables` fonctionne (premier prototype sans LLM).
+# Le module linguiste est facultatif dans certaines installations. S'il manque,
+# le parcours par texte est désactivé ; le parcours à partir de tables reste disponible.
 try:
     from .linguiste import ajouter_latents, appliquer_rattachements, marquer_inseparables, remplacer_anaphores
 except ImportError:
     ajouter_latents = appliquer_rattachements = marquer_inseparables = remplacer_anaphores = None
+    LINGUISTE_DISPONIBLE = False
+else:
+    LINGUISTE_DISPONIBLE = True
 
 
 @dataclass
@@ -107,15 +110,15 @@ def corpus_depuis_discours(discours: dict[str, list[Phrase]], version: str = "19
     ensuite décalés pour être uniques dans l'ensemble du corpus (I1).
 
     `lectures` associe un nom de discours à sa lecture du linguiste. Si le
-    module `linguiste.py` est absent, cette fonction s'arrête avec un message
-    explicite ; pour un premier prototype, utiliser `corpus_depuis_tables`.
+    module linguiste est indisponible, cette fonction s'arrête avec un message
+    explicite ; le parcours par tables reste disponible avec `corpus_depuis_tables`.
     `ensembles_1969` indique si les noms coordonnés forment un seul ensemble
     en 1969 (annexe I) ou sont extraits séparément comme en 1972 (LG6).
     """
-    # Sans le module optionnel du linguiste, l'entrée par discours n'est pas disponible.
+    # Sans le module linguiste, l'entrée par texte ou CoNLL-U n'est pas disponible.
     if appliquer_rattachements is None:
-        raise SystemExit("linguiste.py absent (partie LLM non publiée) : "
-                         "utilisez corpus_depuis_tables(), le pipeline marche sans lui.")
+        raise SystemExit("Module linguiste indisponible : "
+                         "utilisez corpus_depuis_tables() pour traiter des tables CSV.")
     # Importe les traitements Grew de normalisation et d'extraction.
     from .extraction_grew import extraire_ancre_grew, normaliser
     # `decalage` rend les indices uniques d'un discours au suivant.

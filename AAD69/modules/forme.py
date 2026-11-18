@@ -7,8 +7,8 @@ mode et temps. « Le facteur perdit la lettre » : passé simple, actif, affirma
 versions ne l'écrivent pas de la même façon :
 - 1969 : F1 (passé simple) … F5 (passif) ;
 - 1972 : un code à 4 chiffres, ici 0004.
-Ce module calcule ce code ; il est appelé par l'extraction (extraction.py et extraction_grew.py)
-pour chaque prédicat.
+Ce module calcule ce code ; il est appelé par l'extraction (extraction_grew.py) pour chaque
+prédicat.
 
 Deux temps pour coder la forme
 ----------

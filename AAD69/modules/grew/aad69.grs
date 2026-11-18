@@ -15,7 +15,6 @@
 %                       11, 06, 07 de l'annexe 1)
 % Traits posés sur les nœuds : pred (verbe | attribut), S (N1 | N2 : place de l'image S de la
 % proposition dépendante), sujet_vide (X), copule (implicite), locution, emphase, fige.
-% Docs : docs/grew.md. Décisions : G1 à G13 (docs/decisions.md).
 % =============================================================================================
 
 
