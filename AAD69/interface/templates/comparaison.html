@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from "macros.html" import versions, tableau, chiffres %}
+{% block titre %}Comparaison{% endblock %}
+{% block contenu %}
+<header class="entete">
+  <h1>Comparaison</h1>
+  <p>On compare deux relations de même opérateur venant de discours différents, Ei ψ Ek et Ej ψ Em.
+    P1 est la proximité des énoncés de gauche, P2 celle des énoncés de droite. La proximité additionne les poids
+    des cases identiques (p. 92). Quand P1 + P2 dépasse la borne, les deux relations forment une zone de similitude,
+    que le manuel de 1972 appelle un quadruplet.</p>
+</header>
+
+{% call(v, res) versions(resultats) %}
+  {{ chiffres([(res.zones|length, 'zones' if v == '1969' else 'quadruplets'), (res.reglages.borne|nombre, 'borne'), (res.reglages.regle, 'règle')]) }}
+  {{ tableau(tables.table_zones(res), listing=['gauches (Ei/Ej)', 'droites (Ek/Em)'], vide="Aucune zone avec ces réglages.") }}
+
+  {% set d = details.get(v) %}
+  {% if d %}
+  <details class="calcul"{% if a or b %} open{% endif %}>
+    <summary>Détail d'une proximité</summary>
+    <form method="get" action="{{ url_for('comparaison') }}" class="choix-enonces">
+      {% for cle, courant in [('a', d.a), ('b', d.b)] %}
+        <label>{{ cle|upper }}
+          <select name="{{ cle }}" data-auto>
+            {% for e in res.corpus.enonces %}<option value="{{ e.indice }}"{% if e.indice == courant.indice %} selected{% endif %}>{{ e.indice }}, {{ e.discours }} : {{ tables.resume(e) }}</option>{% endfor %}
+          </select>
+        </label>
+      {% endfor %}
+      <noscript><button>Calculer</button></noscript>
+    </form>
+    <table class="donnees pi">
+      <thead><tr><th></th>{% for c in cases %}<th scope="col">{{ c.replace('N2_3', 'N2/3') }}</th>{% endfor %}</tr></thead>
+      <tbody>
+        <tr><th scope="row">A</th>{% for x in d.a.cases() %}<td class="listing{{ ' egal' if d.pi[loop.index0] }}">{{ x }}</td>{% endfor %}</tr>
+        <tr><th scope="row">B</th>{% for x in d.b.cases() %}<td class="listing{{ ' egal' if d.pi[loop.index0] }}">{{ x }}</td>{% endfor %}</tr>
+        <tr class="vecteur"><th scope="row">π</th>{% for x in d.pi %}<td>{{ x }}</td>{% endfor %}</tr>
+      </tbody>
+    </table>
+    <p class="resultat">p(A, B) = <b>{{ d.p }}</b> sur {{ d.max }} au plus. Les cases identiques sont teintées.</p>
+  </details>
+  {% endif %}
+{% endcall %}
+{% endblock %}

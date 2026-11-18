@@ -1,0 +1,50 @@
+{# Macros partagées par les pages. #}
+
+{# Une colonne par version : côte à côte quand les deux sont affichées. #}
+{% macro versions(resultats, classe='') %}
+<div class="cote-a-cote{{ ' seule' if resultats|length == 1 }}{% if classe %} {{ classe }}{% endif %}">
+  {% for v, res in resultats.items() %}
+    <section class="version v{{ v[2:] }}" aria-label="Version {{ v }}">
+      <h2>{{ v }}</h2>
+      {{ caller(v, res) }}
+    </section>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{# Un domaine écrit comme chez Pêcheux : colonnes de termes substituables entre barres verticales. #}
+{% macro paradigme(d) %}
+<article class="domaine{{ ' ' + d.classe if d.classe }}">
+  <h3>{{ d.nom }} <span>{{ d.titre }}</span></h3>
+  <div class="paradigme">
+    {% for colonne in d.colonnes %}
+      <div class="colonne">
+        {% for texte, n in colonne %}<div>{{ texte }}{% if n > 1 %} <i>×{{ n }}</i>{% endif %}</div>{% endfor %}
+      </div>
+      {% if not loop.last %}
+        <div class="operateur"><em>{{ d.operateurs[loop.index0] }}</em>
+          <svg viewBox="0 0 40 10" aria-hidden="true"><path d="M0 5h36M31 1l5 4-5 4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</article>
+{% endmacro %}
+
+{% macro chiffres(paires) %}
+<div class="chiffres">{% for valeur, libelle in paires %}<div><b>{{ valeur }}</b>{{ libelle }}</div>{% endfor %}</div>
+{% endmacro %}
+
+{# Tableau générique à partir d'une liste de dictionnaires (les mêmes que l'export CSV). #}
+{% macro tableau(lignes, listing=[], vide="Rien à afficher.") %}
+{% if lignes %}
+<div class="defile">
+<table class="donnees">
+  <thead><tr>{% for col in lignes[0] %}<th scope="col">{{ col }}</th>{% endfor %}</tr></thead>
+  <tbody>
+    {% for l in lignes %}<tr>{% for col, val in l.items() %}<td{% if col in listing %} class="listing"{% endif %}>{{ val|nombre if val is number else val }}</td>{% endfor %}</tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}<p class="vide">{{ vide }}</p>{% endif %}
+{% endmacro %}

@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AAD69 — {% block titre %}{% endblock %}</title>
+<link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+<link rel="stylesheet" href="{{ url_for('static', filename='fontes/fontes.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+{% set classes_statut = {'prêt': 'pret', 'vide': 'vide', 'erreur': 'vide', 'à lancer': 'attente', 'à venir': 'attente'} %}
+{% set cles_etapes = etapes|map('first')|list %}
+{% set rang_etape = cles_etapes.index(etape) if etape in cles_etapes else -1 %}
+
+<header class="bandeau">
+  <a class="marque" href="{{ url_for('corpus') }}" aria-label="AAD69, accueil">
+    <span class="marque-texte"><span class="marque-nom">AAD69</span><small>analyse automatique du discours</small></span>
+  </a>
+  <div class="corpus-actuel{{ ' vide' if not etat.a_un_corpus }}">
+    {% if etat.a_un_corpus %}Corpus : <strong>{{ etat.source }}</strong>{% else %}Aucun corpus chargé{% endif %}
+  </div>
+  <form class="versions" method="post" action="{{ url_for('version') }}" aria-label="Version affichée">
+    <input type="hidden" name="retour" value="{{ request.full_path }}">
+    {% for valeur, libelle in [('1969', '1969'), ('1972', '1972'), ('les-deux', 'Les deux')] %}
+      <button name="version" value="{{ valeur }}" class="version-{{ valeur }}" aria-pressed="{{ 'true' if etat.version_affichee == valeur else 'false' }}">{{ libelle }}</button>
+    {% endfor %}
+  </form>
+  <aside class="apparence" aria-labelledby="titre-apparence">
+    <h2 id="titre-apparence" class="sr-only">Apparence</h2>
+    <fieldset>
+      <legend class="sr-only">Taille du texte</legend>
+      <label title="Texte petit"><input type="radio" name="taille-texte" value="small"> <span aria-hidden="true" class="a-petit">A</span><span class="sr-only">Petite</span></label>
+      <label title="Texte standard"><input type="radio" name="taille-texte" value="standard" checked> <span aria-hidden="true" class="a-moyen">A</span><span class="sr-only">Standard</span></label>
+      <label title="Texte grand"><input type="radio" name="taille-texte" value="large"> <span aria-hidden="true" class="a-grand">A</span><span class="sr-only">Grande</span></label>
+    </fieldset>
+  </aside>
+  <button class="reglages-lien{{ ' modifies' if ecarts }}" type="button" data-ouvre="reglages">
+    <span>{% if ecarts %}Réglages modifiés ({{ ecarts|length }}){% else %}Réglages du livre{% endif %}</span>
+  </button>
+</header>
+
+<div class="cadre">
+  <nav class="procedure" aria-label="Étapes de l’analyse">
+    <h2>Étapes de l’analyse</h2>
+    <ol>
+      {% for cle, libelle in etapes %}
+        {% set statut = statuts.get(cle, 'non calculé') %}
+        <li class="statut-{{ classes_statut.get(statut, 'non-calcule') }}{{ ' faite' if loop.index0 < rang_etape }}"><a href="{{ url_for(cle.replace('-', '_')) }}"{% if cle == etape %} aria-current="page"{% endif %} title="{{ libelle }} : {{ statut }}">
+          <span class="etape-libelle">{{ libelle }}</span>{% if compteurs.get(cle) %} <span class="compteur-etape">{{ compteurs[cle] }}</span>{% endif %}
+          <small class="etat-etape etat-{{ 'vide' if statut == 'vide' else 'pret' if statut == 'prêt' else 'non-calcule' }}"
+                 aria-label="État : {{ statut }}">{{ statut }}</small>
+        </a></li>
+      {% endfor %}
+    </ol>
+    <p class="legende-etapes" aria-hidden="true">
+      <span class="statut-pret">prêt</span><span class="statut-vide">vide</span><span class="statut-attente">à venir</span>
+    </p>
+  </nav>
+
+  <main>
+    {% if rang_etape >= 0 %}
+      <p class="fil" aria-hidden="true">Étape {{ rang_etape + 1 }} sur {{ etapes|length }}</p>
+    {% endif %}
+    {% if message and not (etape == 'corpus' and etat.a_un_corpus and message[0] == 'ok') %}
+      <p class="message {{ message[0] }}" role="status">{{ message[1] }}</p>
+    {% endif %}
+    {% block contenu %}{% endblock %}
+    {% if etat.a_un_corpus %}
+      {% set cles = etapes|map('first')|list %}{% set rang = cles.index(etape) if etape in cles else -1 %}
+      <nav class="actions-globales" aria-label="Actions sur le corpus">
+        {% if rang > 0 %}{% set prec = etapes[rang - 1] %}
+          <a class="bouton secondaire" href="{{ url_for(prec[0].replace('-', '_')) }}">← {{ prec[1] }}</a>
+        {% endif %}
+        {% if etape != 'corpus' %}<a class="bouton secondaire" href="{{ url_for('export') }}">Télécharger l'analyse (ZIP)</a>{% endif %}
+        {% if 0 <= rang < cles|length - 1 %}{% set suiv = etapes[rang + 1] %}
+          {% if etape == 'linguiste' and etat.decisions_a_verifier %}
+            <span class="attente">{{ etat.decisions_a_verifier }} décision{{ 's' if etat.decisions_a_verifier > 1 }} encore à vérifier : elle{{ 's' if etat.decisions_a_verifier > 1 }} n'entrer{{ 'ont' if etat.decisions_a_verifier > 1 else 'a' }} pas dans l'analyse.</span>
+          {% endif %}
+          <a class="bouton principal" href="{{ url_for(suiv[0].replace('-', '_')) }}">{{ 'Valider et passer aux' if etape == 'linguiste' else 'Étape suivante :' }} {{ suiv[1]|lower if etape == 'linguiste' else suiv[1] }} →</a>
+        {% endif %}
+      </nav>
+    {% endif %}
+  </main>
+</div>
+
+{# --- Panneau des réglages : chaque réglage cite sa décision (docs/decisions.md) --- #}
+<dialog id="reglages" class="panneau" aria-labelledby="titre-reglages">
+  <form method="post" action="{{ url_for('reglages') }}">
+    <input type="hidden" name="retour" value="{{ request.full_path }}">
+    <header>
+      <h2 id="titre-reglages">Réglages</h2>
+      <button type="button" class="fermer" data-ferme="reglages" aria-label="Fermer">×</button>
+    </header>
+    <p class="intro">Les valeurs par défaut sont celles qui reproduisent les exemples de Pêcheux.
+      Les codes (D1, C2…) renvoient au journal des décisions.</p>
+
+    <fieldset>
+      <legend>Énoncés</legend>
+      <label class="case"><input type="checkbox" name="resoudre_anaphores"{% if r.resoudre_anaphores %} checked{% endif %}> {{ catalogue.resoudre_anaphores.libelle }}</label>
+      <p class="aide">{{ catalogue.resoudre_anaphores.explication }} <em>{{ catalogue.resoudre_anaphores.decisions }}</em></p>
+      <div class="choix" role="radiogroup" aria-label="{{ catalogue.coordination_1969.libelle }}">
+        <span>{{ catalogue.coordination_1969.libelle }}</span>
+        <label><input type="radio" name="coordination_1969" value="separee"{% if r.coordination_1969 == 'separee' %} checked{% endif %}> séparée</label>
+        <label><input type="radio" name="coordination_1969" value="ensemble"{% if r.coordination_1969 == 'ensemble' %} checked{% endif %}> ensemble (annexe I)</label>
+      </div>
+      <p class="aide">{{ catalogue.coordination_1969.explication }} <em>{{ catalogue.coordination_1969.decisions }}</em></p>
+      <p class="aide">L’extraction des énoncés est effectuée par Grew, conformément aux règles de l’étape 2.
+        Voir <code>docs/grew.md</code>.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Comparaison des énoncés</legend>
+      <label class="champ">Borne pα
+        <input type="number" name="borne" step="0.5" min="0" value="{{ r.borne|nombre }}" class="{{ 'ecart' if r.borne != livre.borne }}">
+      </label>
+      <p class="aide">{{ catalogue.borne.explication }} <em>{{ catalogue.borne.decisions }}</em></p>
+
+      <div class="choix" role="radiogroup" aria-label="Règle de la zone">
+        <span>Règle de la zone</span>
+        {% for v in ['somme', 'moyenne'] %}
+          <label><input type="radio" name="regle" value="{{ v }}"{% if r.regle == v %} checked{% endif %}> {{ v }}</label>
+        {% endfor %}
+      </div>
+      <p class="aide">{{ catalogue.regle.explication }} <em>{{ catalogue.regle.decisions }}</em></p>
+
+      <details{% if r.poids != livre.poids %} open{% endif %}>
+        <summary>Poids des cases (p. 92)</summary>
+        <p class="aide">{{ catalogue.poids.explication }} <em>{{ catalogue.poids.decisions }}</em></p>
+        <table class="poids">
+          <thead><tr><th></th>{% for c in cases %}<th>{{ c.replace('N2_3', 'N2/3') }}</th>{% endfor %}</tr></thead>
+          <tbody>
+            <tr><th>identiques</th>{% for c in cases %}<td><input type="number" min="0" max="50" name="poids_id_{{ c }}" value="{{ r.poids.identiques[c] }}" class="{{ 'ecart' if r.poids.identiques[c] != livre.poids.identiques[c] }}" aria-label="poids {{ c }} identiques"></td>{% endfor %}</tr>
+            <tr><th>vides</th>{% for c in cases %}<td>{% if livre.poids.vides[c] is not none %}<input type="number" min="0" max="50" name="poids_vide_{{ c }}" value="{{ r.poids.vides[c] }}" class="{{ 'ecart' if r.poids.vides[c] != livre.poids.vides[c] }}" aria-label="poids {{ c }} vides">{% else %}—{% endif %}</td>{% endfor %}</tr>
+          </tbody>
+        </table>
+        <label class="champ">Deux copules ε / ε (case V)
+          <input type="number" min="0" max="50" name="poids_copules" value="{{ r.poids.copules }}" class="{{ 'ecart' if r.poids.copules != livre.poids.copules }}">
+        </label>
+      </details>
+
+      {% for nom in ['intermediaires', 'annulation', 'exclure_phi_alpha'] %}
+        <label class="case"><input type="checkbox" name="{{ nom }}"{% if r[nom] %} checked{% endif %}> {{ catalogue[nom].libelle }}</label>
+        <p class="aide">{{ catalogue[nom].explication }} <em>{{ catalogue[nom].decisions }}</em></p>
+      {% endfor %}
+    </fieldset>
+
+    <fieldset>
+      <legend>Domaines</legend>
+      <div class="choix" role="radiogroup" aria-label="Homogénéité des chaînes">
+        <span>Homogénéité des chaînes (1969)</span>
+        <label><input type="radio" name="critere_homogeneite" value="alg5"{% if r.critere_homogeneite == 'alg5' %} checked{% endif %}> Alg. 4-5</label>
+        <label><input type="radio" name="critere_homogeneite" value="sequence_commune"{% if r.critere_homogeneite == 'sequence_commune' %} checked{% endif %}> séquence commune</label>
+      </div>
+      <p class="aide">{{ catalogue.critere_homogeneite.explication }} <em>{{ catalogue.critere_homogeneite.decisions }}</em></p>
+      <label class="case"><input type="checkbox" name="hyperdomaines_1972"{% if r.hyperdomaines_1972 %} checked{% endif %}> {{ catalogue.hyperdomaines_1972.libelle }}</label>
+      <p class="aide">{{ catalogue.hyperdomaines_1972.explication }} <em>{{ catalogue.hyperdomaines_1972.decisions }}</em></p>
+    </fieldset>
+
+    <footer>
+      <button type="submit" class="principal">Appliquer</button>
+      <button type="submit" formaction="{{ url_for('reglages_livre') }}">Rétablir les réglages du livre</button>
+    </footer>
+  </form>
+</dialog>
+</body>
+</html>

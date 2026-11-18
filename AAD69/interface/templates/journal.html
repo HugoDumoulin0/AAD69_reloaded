@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "macros.html" import versions %}
+{% block titre %}Journal{% endblock %}
+{% block contenu %}
+<header class="entete">
+  <h1>Journal et export</h1>
+  <p>Chaque réglage renvoie à une décision du journal (<code>docs/decisions.md</code>) : ce que dit Pêcheux,
+    ce que fait le programme, et pourquoi. L'export contient les tableaux de chaque étape, les réglages et ce journal.</p>
+</header>
+
+<p class="export"><a class="bouton principal" href="{{ url_for('export') }}" download>Télécharger l'analyse (zip)</a></p>
+
+{% call(v, res) versions(resultats) %}
+  {% set ec = res.reglages.ecarts() %}
+  {% if ec %}
+    <ul class="ecarts">
+      {% for reglage, val_livre, ici in ec %}
+        <li><strong>{{ reglage.libelle }}</strong> ({{ reglage.decisions }}) : livre {{ val_livre if reglage.nom != 'poids' else 'p. 92' }},
+          ici {{ ici if reglage.nom != 'poids' else 'modifiés' }}. {{ reglage.explication }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="conforme">Réglages du livre : aucun écart.</p>
+  {% endif %}
+  <table class="donnees">
+    <thead><tr><th scope="col">réglage</th><th scope="col">valeur</th><th scope="col">décisions</th></tr></thead>
+    <tbody>
+      {% for nom, reglage in catalogue.items() %}
+        {% set val = res.reglages[nom] %}
+        <tr><td>{{ reglage.libelle }}</td>
+          <td>{% if nom == 'poids' %}{{ 'p. 92' if val == livre.poids else 'modifiés' }}{% elif val is sameas true %}oui{% elif val is sameas false %}non{% else %}{{ val|nombre if val is number else val }}{% endif %}</td>
+          <td>{{ reglage.decisions }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endcall %}
+{% endblock %}

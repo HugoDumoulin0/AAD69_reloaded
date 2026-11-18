@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block titre %}Lecture du linguiste{% endblock %}
+{% block contenu %}
+<header class="entete">
+  <h1>Lecture du linguiste</h1>
+  <p>Les suggestions du LLM sont appliquées automatiquement après Stanza. Tu peux refuser celles qui ne conviennent
+    pas ou les modifier ; les phrases sans suggestion continuent avec Stanza et les règles AAD69.</p>
+</header>
+
+{% if not etat.phrases %}
+  <p class="note">La lecture porte sur des phrases : charge des textes ou des fichiers CoNLL-U (un corpus de tables
+    d'énoncés est déjà « lu »).</p>
+{% else %}
+  {% if etat.linguiste_tente and not etat.lectures %}
+    <form method="post" action="{{ url_for('linguiste_lancer') }}" data-loading-message="Lecture en cours… un appel à Mistral par discours.">
+      <button class="principal">Réessayer la lecture du linguiste</button>
+    </form>
+  {% endif %}
+  <p class="note">Il faut la clé <code>MISTRAL_API_KEY</code> (fichier <code>.env</code> du projet). Les phrases
+    sont envoyées à Mistral : seulement des textes non confidentiels. Les réponses sont gardées en cache : relancer
+    la lecture après un échec ne refait pas l'appel si la réponse est déjà en cache.</p>
+
+  {% for b in blocs %}
+  <section class="lecture" aria-labelledby="lecture-{{ b.nom }}">
+    <h2 id="lecture-{{ b.nom }}">{{ b.nom }}</h2>
+    {% if not b.lecture %}
+      <p class="vide">Pas encore lu.</p>
+    {% else %}
+      {% set n = b.lecture.decisions|length %}
+      {% set acceptees = b.lecture.decisions|selectattr('acceptee')|list|length %}
+      {% set refusees = b.lecture.decisions|rejectattr('acceptee')|list|length %}
+      <p class="compte">{{ n }} suggestion{{ 's' if n > 1 }} automatique{{ 's' if n > 1 }}
+        — {{ acceptees }} appliquée{{ 's' if acceptees > 1 }}, {{ refusees }} refusée{{ 's' if refusees > 1 }}
+        — modèle {{ b.lecture.modele }}, consigne {{ b.lecture.consigne }}.</p>
+
+      {% for l in b.lignes %}
+      <article class="phrase-lecture" id="l-{{ l.phrase.sent_id }}">
+        <header class="phrase-lecture-entete">
+          <span class="identifiant listing">{{ l.phrase.sent_id }}</span>
+          <p>{{ l.phrase.texte }} <span class="etat-phrase">
+            {{ 'Suggestions appliquées' if l.decisions else 'Stanza + règles' }}</span></p>
+        </header>
+        {% if l.decisions %}
+          <p class="lecture-interpretee"><strong>Lecture interprétée :</strong> {{ l.lue }}</p>
+          <div class="suggestions">
+          {% for d, texte in l.decisions %}
+            <section class="suggestion{{ ' suggestion-refusee' if not d.acceptee }}">
+              <div class="suggestion-entete">
+                <span class="type-suggestion">
+                  {{ {'anaphore': 'Anaphore', 'rattachement': 'Rattachement', 'latent': 'Énoncé latent',
+                      'inseparable': 'Coordination inséparable', 'fige': 'Syntagme figé',
+                      'nominalisation': 'Nominalisation', 'double': 'Double lecture'}.get(d.type, 'Suggestion') }}
+                </span>
+                <span class="etat-suggestion {{ 'acceptee' if d.acceptee else 'refusee' }}">
+                  {% if d.modifiee and d.acceptee %}Modifiée et appliquée
+                  {% elif d.acceptee %}Appliquée automatiquement
+                  {% else %}Refusée — règles seules{% endif %}
+                </span>
+              </div>
+              <p class="decision-proposee">{{ texte }}</p>
+              {% if d.raison %}<p class="raison-suggestion"><strong>Justification :</strong> {{ d.raison }}</p>{% endif %}
+              <div class="actions-suggestion">
+                {% if not d.acceptee %}
+                <form method="post" action="{{ url_for('linguiste_decision') }}">
+                  <input type="hidden" name="discours" value="{{ b.nom }}"><input type="hidden" name="cle" value="{{ d.cle }}">
+                  <input type="hidden" name="choix" value="accepter"><input type="hidden" name="ancre" value="l-{{ l.phrase.sent_id }}">
+                  <button class="principal">Appliquer la suggestion</button>
+                </form>
+                {% endif %}
+                {% if d.acceptee %}
+                <form method="post" action="{{ url_for('linguiste_decision') }}">
+                  <input type="hidden" name="discours" value="{{ b.nom }}"><input type="hidden" name="cle" value="{{ d.cle }}">
+                  <input type="hidden" name="choix" value="refuser"><input type="hidden" name="ancre" value="l-{{ l.phrase.sent_id }}">
+                  <button class="secondaire">Refuser et garder les règles seules</button>
+                </form>
+                {% endif %}
+                {% if d.type in ('anaphore', 'rattachement', 'latent') %}
+                <details class="modifier-suggestion">
+                  <summary>Modifier la suggestion</summary>
+                  <form method="post" action="{{ url_for('linguiste_corriger') }}" class="form-correction-suggestion">
+                    <input type="hidden" name="discours" value="{{ b.nom }}">
+                    <input type="hidden" name="cle" value="{{ d.cle }}">
+                    <input type="hidden" name="ancre" value="l-{{ l.phrase.sent_id }}">
+                    {% if d.type == 'anaphore' %}
+                      {% set selection = d.antecedents|map('join', '|')|list %}
+                      <fieldset class="choix-antecedents">
+                        <legend>Que représente « {{ l.phrase.mots[d.mot].forme }} » ? Coche le ou les noms.</legend>
+                        {% for candidat in l.antecedents %}
+                        <label>
+                          <input type="checkbox" name="antecedents" value="{{ candidat.cle }}"
+                                 {% if candidat.cle in selection %}checked{% endif %}>
+                          <span><strong>« {{ candidat.forme }} »</strong><small>{{ candidat.phrase }}</small></span>
+                        </label>
+                        {% endfor %}
+                      </fieldset>
+                    {% elif d.type == 'rattachement' %}
+                      <label class="champ-correction">Rattacher « {{ l.phrase.mots[d.mot].forme }} » à
+                        <select name="tete">
+                          {% for tete in l.tetes if tete.id != d.mot %}
+                          <option value="{{ tete.id }}" {% if tete.id == d.tete %}selected{% endif %}>
+                            {{ tete.forme }}{% if tete.id %} (mot {{ tete.id }}){% endif %}
+                          </option>
+                          {% endfor %}
+                        </select>
+                      </label>
+                      <label class="champ-correction">Relation syntaxique
+                        <select name="relation">
+                          {% for valeur in relations_permises %}
+                          <option value="{{ valeur }}" {% if valeur == d.relation %}selected{% endif %}>{{ valeur }}</option>
+                          {% endfor %}
+                        </select>
+                      </label>
+                    {% else %}
+                      <label class="champ-correction">Lieu de l’énoncé latent
+                        <select name="complement">
+                          {% for lieu in l.lieux %}
+                          <option value="{{ lieu.id }}" {% if lieu.id == d.complement %}selected{% endif %}>
+                            {{ lieu.preposition }} « {{ lieu.forme }} » (mot {{ lieu.id }})
+                          </option>
+                          {% endfor %}
+                        </select>
+                      </label>
+                    {% endif %}
+                    <label class="champ-correction">Note sur la correction (facultative)
+                      <textarea name="raison" rows="2" placeholder="Pourquoi as-tu modifié cette suggestion ?"></textarea>
+                    </label>
+                    <button class="principal">Enregistrer et appliquer</button>
+                  </form>
+                </details>
+                {% endif %}
+              </div>
+            </section>
+          {% endfor %}
+          </div>
+        {% else %}
+          <p class="vide">Aucune suggestion ; l'analyse de Stanza et les règles sont utilisées.</p>
+        {% endif %}
+      </article>
+      {% endfor %}
+      {% if b.lecture.rejets %}
+      <details class="rejets"><summary>Suggestions écartées automatiquement ({{ b.lecture.rejets|length }})</summary>
+        <ul>{% for r in b.lecture.rejets %}<li>{{ r.motif }} <small class="listing">{{ r.element }}</small></li>{% endfor %}</ul>
+      </details>
+      {% endif %}
+    {% endif %}
+  </section>
+  {% endfor %}
+{% endif %}
+{% endblock %}

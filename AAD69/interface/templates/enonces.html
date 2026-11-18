@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% from "macros.html" import versions %}
+{% block titre %}Énoncés{% endblock %}
+{% block contenu %}
+<header class="entete">
+  <h1>Énoncés élémentaires</h1>
+  <p>Chaque proposition devient un ou plusieurs énoncés à huit cases : la forme F (temps, mode, voix), le sujet
+    D1 N1, le verbe V, l'adverbe, la préposition PP (<code>*</code> pour un complément direct) et le complément
+    D2 N2/3. Une case vide vaut Ø. F et les déterminants ne se codent pas de la même façon en 1969 et en 1972.</p>
+</header>
+
+<nav class="filtre" aria-label="Discours">
+  <a href="{{ url_for('enonces') }}"{% if not filtre %} aria-current="page"{% endif %}>Tous</a>
+  {% for nom, _, _ in etat.discours() %}<a href="{{ url_for('enonces', discours=nom) }}"{% if filtre == nom %} aria-current="page"{% endif %}>{{ nom }}</a>{% endfor %}
+</nav>
+
+{% call(v, res) versions(resultats) %}
+  {% set lignes = res.corpus.enonces if not filtre else res.corpus.enonces|selectattr('discours', 'equalto', filtre)|list %}
+  {% set nb = etat.corrections.get(v, {})|length %}
+  <p class="compte">{{ lignes|length }} énoncés{% if nb %}, dont {{ nb }} corrigé{{ 's' if nb > 1 }} à la main{% endif %}</p>
+  <div class="defile">
+  <table class="donnees enonces">
+    <thead><tr><th scope="col">n°</th>{% for c in cases %}<th scope="col">{{ c.replace('N2_3', 'N2/3') }}</th>{% endfor %}</tr></thead>
+    {% for groupe in lignes|groupby('discours') %}
+      <tbody>
+        <tr class="groupe"><th colspan="{{ cases|length + 1 }}" scope="rowgroup">{{ groupe.grouper }}</th></tr>
+        {% for e in groupe.list %}
+          {% set corr = etat.corrections.get(v, {}).get(e.indice, {}) %}
+          <tr id="e{{ v }}-{{ e.indice }}" title="{{ e.source }}">
+            <td class="num"><a href="{{ url_for('enonce_corriger', version=v, indice=e.indice) }}" title="Corriger l'énoncé {{ e.indice }}">{{ e.indice }}</a></td>
+            {% for valeur in e.cases() %}{% set c = cases[loop.index0] %}<td class="listing{{ ' vide' if valeur == 'Ø' }}{{ ' corrige' if c in corr }}"{% if c in corr %} title="corrigé à la main"{% endif %}>{{ valeur }}</td>{% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    {% endfor %}
+  </table>
+  </div>
+{% endcall %}
+{% set res0 = resultats.values()|first %}
+{% set anaphores = tables.table_anaphores(res0) if res0 else [] %}
+{% if filtre %}{% set anaphores = anaphores|selectattr('discours', 'equalto', filtre)|list %}{% endif %}
+<section class="anaphores" aria-labelledby="titre-anaphores">
+  <h2 id="titre-anaphores">Anaphores rétablies</h2>
+  {% if not res0.corpus.anaphores %}
+    <p class="note">Aucune table d'anaphores : le réglage « Rétablir les anaphores » est désactivé, ou le corpus
+      vient de tables d'énoncés (déjà établies à la main).</p>
+  {% else %}
+    {% set ambigues = anaphores|selectattr('statut', 'ne', 'résolue')|list %}
+    <p class="compte">{{ anaphores|length }} pronom{{ 's' if anaphores|length > 1 }} examiné{{ 's' if anaphores|length > 1 }}{% if ambigues %},
+      dont {{ ambigues|length }} non rétabli{{ 's' if ambigues|length > 1 }} : à vérifier, et à corriger à la main dans l'énoncé si besoin{% endif %}.
+      Le même rétablissement vaut pour les deux versions ; seul le déterminant change (L/LS en 1969, R en 1972).</p>
+    {% if anaphores %}
+    <div class="defile">
+    <table class="donnees anaphores">
+      <thead><tr><th scope="col">phrase</th><th scope="col">pronom</th><th scope="col">antécédent rétabli</th>
+        <th scope="col">règle</th><th scope="col">statut</th></tr></thead>
+      <tbody>
+      {% for a in anaphores %}
+        <tr class="{{ 'a-verifier' if a['statut'] != 'résolue' }}">
+          <td class="listing">{{ a['phrase'] }}</td>
+          <td class="listing">{{ a['pronom'] }}</td>
+          <td class="listing">{% if a['antécédent'] %}{{ a['antécédent'] }} <small>({{ a["phrase de l'antécédent"] }})</small>{% elif a['candidats'] %}<span class="vide">{{ a['candidats'].replace(' | ', ' ou ') }} ?</span>{% else %}<span class="vide">Ø</span>{% endif %}</td>
+          <td>{{ a['règle'] }}</td>
+          <td>{{ a['statut'] }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% endif %}
+  {% endif %}
+</section>
+
+<p class="note">Pour corriger un énoncé, cliquez sur son numéro. Les cases corrigées à la main sont soulignées ;
+  toutes les étapes suivantes sont recalculées avec les énoncés corrigés.</p>
+{% endblock %}

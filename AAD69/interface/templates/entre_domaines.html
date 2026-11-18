@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "macros.html" import versions, tableau %}
+{% block titre %}Entre domaines{% endblock %}
+{% block contenu %}
+<header class="entete">
+  <h1>Relations entre domaines</h1>
+  <p>On compare les origines des domaines, c'est-à-dire leurs énoncés de gauche. En 1969, deux domaines partagent
+    leurs origines, s'incluent, se recoupent ; sinon l'un dépend de l'autre, à quatre degrés, ou ils sont disjoints.
+    En 1972, le manuel ne donne que IDORG, INCLU, INTER et la possibilité d'une dépendance.</p>
+</header>
+
+{% call(v, res) versions(resultats) %}
+  {% if res.domaines|length < 2 %}
+    <p class="vide">Il faut au moins deux domaines pour les comparer.</p>
+  {% else %}
+    {% set m = tables.matrice_relations_domaines(res) %}
+    <div class="defile">
+    <table class="matrice">
+      <thead><tr><th></th>{% for nom in res.domaines %}<th scope="col">{{ nom }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for ligne in m %}<tr><th scope="row">{{ ligne[''] }}</th>{% for nom in res.domaines %}<td{% if ligne[nom] == '·' %} class="diag"{% endif %}>{{ ligne[nom] }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+    </table>
+    </div>
+    <p class="legende">{{ tables.LEGENDE_MATRICE[v] }}. Se lit de la ligne vers la colonne.</p>
+    <details><summary>Liste des relations</summary>
+      {{ tableau(tables.table_relations_domaines(res)|rejectattr('relation', 'in', ['AUCUNE', 'DISJOINTS'])|list, vide="Aucune relation.") }}
+    </details>
+  {% endif %}
+{% endcall %}
+{% endblock %}

@@ -1,0 +1,459 @@
+/* AAD69 — page académique : fond blanc, encre noire, filets fins, typographie de livre. */
+
+:root {
+  --feuille: #FFFFFF;
+  --papier: #FFFFFF;
+  --encre: #111111;
+  --gris: #555555;          /* texte secondaire */
+  --gris-clair: #999999;    /* cases vides, éléments à venir */
+  --trait: #D6D6D6;         /* filet fin */
+  --teinte: #F3F3F3;        /* survol, cellules identiques */
+  --ecart: #8A5300;         /* réglage modifié par rapport au livre */
+  --erreur: #9B1C1C;
+  --texte: "Gentium Book Plus", "Linux Libertine", Georgia, "Times New Roman", serif;
+  --titre: "Gentium Book Plus", "Linux Libertine", Georgia, "Times New Roman", serif;
+  --listing: "Anonymous Pro", "DejaVu Sans Mono", "Courier New", monospace;
+  --ink: var(--encre);
+  --largeur-procedure: 12.5rem;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 4rem; }
+html[data-taille-texte="small"] { --facteur-texte: .9; }
+html[data-taille-texte="standard"] { --facteur-texte: 1; }
+html[data-taille-texte="large"] { --facteur-texte: 1.15; }
+body { margin: 0; background: var(--feuille); color: var(--encre); font: 1rem/1.55 var(--texte); }
+h1, h2, h3, h4 { font-family: var(--titre); color: var(--encre); font-weight: 700; }
+a { color: var(--encre); text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: var(--gris-clair);
+  text-underline-offset: .2em; }
+a:hover { text-decoration-color: var(--encre); }
+code { font: .9em var(--listing); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--encre); outline-offset: 2px; }
+.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* --- bandeau ------------------------------------------------------------------------------ */
+.bandeau { display: flex; align-items: baseline; gap: 1.6rem; padding: .9rem 1.5rem .8rem 1.25rem; background: var(--feuille);
+  border-bottom: 1px solid var(--encre); position: sticky; top: 0; z-index: 10; }
+.marque { display: flex; align-items: baseline; gap: .6rem; color: var(--encre); text-decoration: none; white-space: nowrap; }
+.marque-texte { display: flex; align-items: baseline; gap: .6rem; }
+.marque-nom { font: 700 1.45rem/1 var(--titre); }
+.marque small { font-style: italic; color: var(--gris); font-size: .95rem; }
+.corpus-actuel { min-width: 0; color: var(--gris); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .95rem; }
+.corpus-actuel.vide { font-style: italic; }
+.corpus-actuel strong { color: var(--encre); }
+/* versions et taille du texte : de simples mots, celui choisi en gras et souligné */
+.versions { margin-left: auto; display: flex; align-items: baseline; flex: none; }
+.versions button { border: 0; background: none; padding: 0 .55rem; cursor: pointer; color: var(--gris); font-size: .95rem; }
+.versions button + button { border-left: 1px solid var(--trait); }
+.versions button:hover { color: var(--encre); }
+.versions button[aria-pressed="true"] { color: var(--encre); font-weight: 700; text-decoration: underline;
+  text-underline-offset: .25em; }
+.apparence { flex: none; }
+.apparence fieldset { display: flex; align-items: baseline; gap: .15rem; margin: 0; padding: 0; border: 0; }
+.apparence label { position: relative; padding: 0 .25rem; cursor: pointer; color: var(--gris-clair); line-height: 1; }
+.apparence input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.apparence label:hover { color: var(--encre); }
+.apparence label:has(input:checked) { color: var(--encre); font-weight: 700; }
+.apparence label:has(input:focus-visible) { outline: 2px solid var(--encre); }
+.a-petit { font-size: .8rem; }
+.a-moyen { font-size: 1rem; }
+.a-grand { font-size: 1.25rem; }
+.reglages-lien { flex: none; background: none; border: 0; padding: 0; cursor: pointer; font-size: .95rem; color: var(--encre);
+  text-decoration: underline; text-decoration-color: var(--gris-clair); text-underline-offset: .2em; }
+.reglages-lien:hover { text-decoration-color: var(--encre); }
+.reglages-lien.modifies { color: var(--ecart); font-weight: 700; }
+
+/* --- procédure : la frise des étapes, collée à gauche ------------------------------------------- */
+.cadre { display: grid; grid-template-columns: var(--largeur-procedure) minmax(0, 1fr); min-height: calc(100vh - 3.3rem); }
+.procedure { padding: 1.4rem .9rem 2rem .75rem; border-right: 1px solid var(--trait); }
+.procedure h2 { font: 700 .95rem/1.3 var(--titre); margin: 0 0 .9rem .1rem; }
+.procedure ol { list-style: none; margin: 0; padding: 0; counter-reset: etape; position: sticky; top: 4.6rem; }
+.procedure li { counter-increment: etape; position: relative; }
+.procedure li:not(:last-child)::after { content: ""; position: absolute; left: calc(.1rem + .7rem - .5px); top: 1.85rem;
+  bottom: -.2rem; width: 1px; background: var(--trait); }
+.procedure li.faite:not(:last-child)::after { background: var(--encre); }
+.procedure a { display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto; align-items: center; column-gap: .55rem;
+  padding: .32rem 0 .32rem .1rem; margin: 0 0 .2rem; color: var(--encre); text-decoration: none; }
+.procedure a:hover .etape-libelle { text-decoration: underline; text-underline-offset: .2em; }
+.procedure a::before { content: counter(etape); position: relative; z-index: 1; display: grid; place-items: center;
+  width: 1.4rem; height: 1.4rem; border-radius: 50%; font-size: .78rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  background: var(--feuille); color: var(--gris-clair); border: 1px solid var(--trait); }
+.procedure .statut-pret a::before { color: var(--encre); border-color: var(--encre); }
+.procedure .statut-vide a::before { color: var(--encre); border: 1px dashed var(--encre); }
+.procedure .statut-non-calcule a, .procedure .statut-attente a { color: var(--gris); }
+.procedure a[aria-current="page"] { font-weight: 700; color: var(--encre); }
+.procedure a[aria-current="page"]::before { background: var(--encre); color: var(--feuille); border: 1px solid var(--encre); }
+.procedure .etape-libelle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .95rem; }
+.procedure .compteur-etape { font-size: .85rem; font-weight: 400; color: var(--gris); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.procedure a[aria-current="page"] .compteur-etape { color: var(--encre); }
+.procedure .etat-etape { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.legende-etapes { display: flex; flex-wrap: wrap; gap: .25rem .8rem; margin: 1.2rem 0 0 .1rem; font-size: .8rem; color: var(--gris);
+  font-style: italic; }
+.legende-etapes span::before { content: ""; display: inline-block; width: .6rem; height: .6rem; border-radius: 50%;
+  margin-right: .3rem; vertical-align: -.03rem; border: 1px solid var(--trait); }
+.legende-etapes .statut-pret::before { border-color: var(--encre); }
+.legende-etapes .statut-vide::before { border: 1px dashed var(--encre); }
+
+/* --- page --------------------------------------------------------------------------------- */
+main { min-width: 0; padding: 1.5rem clamp(1.25rem, 3vw, 3rem) 3rem; font-size: calc(1rem * var(--facteur-texte, 1)); }
+main > * { max-width: 1200px; }
+.fil { margin: 0 0 .2rem; font-style: italic; color: var(--gris); font-size: .92em; }
+.entete { margin-bottom: 1.8rem; }
+.entete h1 { font: 700 2rem/1.15 var(--titre); margin: 0 0 .6rem; padding-bottom: .4rem; border-bottom: 1px solid var(--encre); }
+.entete p { margin: 0 0 .5rem; max-width: 75ch; }
+.message { padding: .1rem 0 .1rem .9rem; border-left: 2px solid var(--encre); margin: 0 0 1.4rem; max-width: 75ch; }
+.message.erreur { border-color: var(--erreur); color: var(--erreur); }
+.message.info { font-style: italic; }
+.vide, .note { color: var(--gris); font-style: italic; }
+p.note { max-width: 75ch; }
+.loading-status { margin-top: .8rem; font-style: italic; }
+.loading-status:not([hidden]) { display: flex; align-items: center; gap: .6rem; }
+.loading-status:not([hidden])::before { content: ""; width: .8rem; height: .8rem; flex: none; border: 1.5px solid currentColor;
+  border-right-color: transparent; border-radius: 50%; animation: tourner .8s linear infinite; }
+@keyframes tourner { to { transform: rotate(360deg); } }
+
+/* --- boutons : rectangles nets ------------------------------------------------------------------ */
+button.principal, a.bouton.principal { display: inline-block; margin-top: 0; background: var(--encre); color: var(--feuille);
+  border: 1px solid var(--encre); border-radius: 0; padding: .4rem 1rem; font-weight: 700; cursor: pointer; text-decoration: none; }
+button.principal:hover, a.bouton.principal:hover { background: #333; }
+button.principal:disabled { background: var(--gris-clair); border-color: var(--gris-clair); cursor: not-allowed; }
+button.secondaire, a.bouton.secondaire { display: inline-block; margin-top: 0; background: var(--feuille); color: var(--encre);
+  border: 1px solid var(--encre); border-radius: 0; padding: .4rem 1rem; cursor: pointer; text-decoration: none; }
+button.secondaire:hover, a.bouton.secondaire:hover { background: var(--teinte); }
+button.discret, a.discret { background: none; border: 0; color: var(--encre); cursor: pointer; padding: 0;
+  text-decoration: underline; text-decoration-color: var(--gris-clair); text-underline-offset: .2em; }
+button.discret:hover, a.discret:hover { text-decoration-color: var(--encre); }
+.bouton-bloque { opacity: .6; cursor: not-allowed; }
+.actions-globales { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem; margin: 2.5rem 0 0; padding-top: 1rem;
+  border-top: 1px solid var(--encre); }
+.actions-globales > .principal { margin-left: auto; }
+.actions-globales > span { flex: 1; color: var(--ecart); font-style: italic; }
+.actions-globales > span + .principal { margin-left: 0; }
+.actions-ligne { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1rem; margin: 1rem 0 0; }
+
+/* --- versions côte à côte : deux colonnes séparées d'un filet ----------------------------------- */
+.cote-a-cote { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cote-a-cote.seule { grid-template-columns: minmax(0, 1fr); }
+.version { min-width: 0; padding: 0 2rem 0 0; }
+.version + .version { padding: 0 0 0 2rem; border-left: 1px solid var(--trait); }
+.version > h2 { font: 700 1.4rem/1.2 var(--titre); margin: 0 0 .5rem; padding-bottom: .25rem; border-bottom: 1px solid var(--trait); }
+.version h3 { font: 700 1.05rem/1.3 var(--titre); margin: 1.3rem 0 .5rem; }
+.source { font-style: italic; margin: 0 0 1rem; }
+.sous-titre { font: 700 1rem/1.3 var(--titre); margin: 1.4rem 0 .6rem; }
+.compte { color: var(--gris); font-style: italic; margin: 0 0 .7rem; }
+
+/* chiffres clés : nombre en gras, libellé en italique, sans cadre */
+.chiffres { display: flex; flex-wrap: wrap; gap: .3rem 2rem; margin: 0 0 1.3rem; }
+.chiffres div { font-style: italic; color: var(--gris); }
+.chiffres b { display: block; font: 700 1.7rem/1.1 var(--titre); color: var(--encre); font-variant-numeric: lining-nums tabular-nums; }
+
+/* --- tableaux : filets à la manière des tableaux de livre ----------------------------------------- */
+.defile { overflow-x: auto; max-width: 100%; }
+table.donnees { border-collapse: collapse; font-size: .95em; margin: 0 0 1rem; border-top: 1.5px solid var(--encre);
+  border-bottom: 1.5px solid var(--encre); }
+.donnees th { font-weight: 700; text-align: left; padding: .35rem .8rem .35rem 0; border-bottom: 1px solid var(--encre); white-space: nowrap; }
+.donnees td { padding: .28rem .8rem .28rem 0; border-bottom: 1px solid #EBEBEB; vertical-align: top; }
+.donnees tbody tr:not(.groupe):hover td { background: var(--teinte); }
+.donnees td.listing, .donnees td.num { font: 14.5px/1.5 var(--listing); white-space: nowrap; }
+.donnees td.num { color: var(--gris); text-align: right; padding-right: 1rem; }
+.donnees td.vide { color: var(--gris-clair); font-style: normal; }
+.donnees tr.groupe th { font-style: italic; padding-top: .9rem; border-bottom: 1px solid var(--trait); }
+.donnees tbody:first-of-type tr.groupe th { padding-top: .4rem; }
+.debut { color: var(--gris); max-width: 48ch; }
+
+/* --- LE domaine, comme chez Pêcheux : colonnes de termes substituables entre barres -------------- */
+.domaine { margin: 0 0 1.8rem; }
+.domaine h3, .version .domaine h3 { font: 700 1.02rem/1.3 var(--titre); margin: 0 0 .7rem; }
+.domaine h3 span { font-weight: 400; font-style: italic; }
+.paradigme { display: flex; flex-wrap: wrap; align-items: center; row-gap: .8rem; }
+.colonne { border-left: 1.5px solid var(--encre); border-right: 1.5px solid var(--encre); padding: .15rem .8rem;
+  font: 15px/1.75 var(--listing); white-space: nowrap; }
+.colonne div { display: flex; justify-content: space-between; gap: 1rem; }
+.colonne i { font-style: normal; color: var(--gris); font-size: 12px; }
+.operateur { display: flex; flex-direction: column; align-items: center; padding: 0 .6rem; min-width: 3.4rem; }
+.operateur em { font: italic 1.1rem/1 var(--titre); }
+.operateur svg { width: 2.6rem; height: .7rem; }
+.coef { font-style: italic; margin: -.4rem 0 1.4rem; max-width: 46ch; }
+.coef .barre { display: inline-block; vertical-align: middle; width: 8rem; height: .4rem; border: 1px solid var(--encre); margin: 0 .5rem; }
+.coef .barre span { display: block; height: 100%; background: var(--encre); }
+
+details { margin: 1rem 0 0; }
+summary { cursor: pointer; font-weight: 700; }
+summary:hover { text-decoration: underline; text-underline-offset: .2em; }
+details[open] > summary { margin-bottom: .7rem; }
+
+/* --- correction des énoncés à la main (I6) --------------------------------------------------- */
+.donnees td.corrige, input.corrige { text-decoration: underline 2px var(--ecart); text-underline-offset: .25em; }
+.donnees td.num a { color: inherit; }
+.phrase { margin: 0 0 1.6rem; padding: .1rem 0 .1rem 1rem; border-left: 2px solid var(--encre); max-width: 70ch; font-style: italic; }
+.correction input.listing { font: 14.5px var(--listing); border: 1px solid var(--encre); padding: .2rem .4rem; width: 16rem; }
+.correction .actions { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1.4rem; }
+
+/* --- graphes des discours ------------------------------------------------------------------ */
+.graphe-cadre { border-top: 1px solid var(--trait); border-bottom: 1px solid var(--trait); padding: .8rem 0; margin: 0 0 1rem; }
+svg.graphe { display: block; color: var(--encre); max-width: none; height: auto; }
+svg.graphe .noeud rect { fill: var(--feuille); stroke: var(--encre); stroke-width: 1; }
+svg.graphe .noeud text { font: 13px var(--listing); fill: var(--encre); }
+svg.graphe .arete { fill: none; stroke: var(--encre); stroke-width: 1.2; }
+svg.graphe .arete.ordre { stroke-dasharray: 4 3; stroke-width: 1; opacity: .6; }
+svg.graphe .op { font: italic 15px var(--titre); fill: var(--encre); }
+
+/* --- formulaires --------------------------------------------------------------------------------- */
+select, input[type="number"], input[type="text"], input:not([type]) { border: 1px solid var(--gris); border-radius: 0;
+  background: var(--feuille); padding: .2rem .4rem; }
+textarea { width: 100%; border: 1px solid var(--gris); border-radius: 0; background: var(--feuille); padding: .5rem .6rem;
+  line-height: 1.5; resize: vertical; }
+textarea:focus, input:focus, select:focus { border-color: var(--encre); outline: 1px solid var(--encre); }
+
+/* --- comparaison : détail d'une proximité -------------------------------------------------------- */
+.choix-enonces { display: grid; gap: .5rem; margin: 0 0 1rem; }
+.choix-enonces label { display: grid; grid-template-columns: 1.5rem 1fr; align-items: center; font-weight: 700; }
+.choix-enonces select { max-width: 100%; font-weight: 400; }
+.pi td.egal { background: var(--teinte); font-weight: 700; }
+.pi tr.vecteur td { font: 14.5px var(--listing); color: var(--gris); }
+.resultat b { font-weight: 700; font-size: 1.15em; }
+
+/* --- matrice des relations entre domaines (comme p. 127) ------------------------------------------ */
+table.matrice { border-collapse: collapse; margin: 0 0 .6rem; }
+.matrice th { font-weight: 700; padding: .3rem .6rem; }
+.matrice td { width: 3rem; height: 2.2rem; text-align: center; border: 1px solid var(--encre); font: 700 16px var(--listing); }
+.matrice td.diag { color: var(--gris-clair); font-weight: 400; }
+.legende { font-style: italic; font-size: .92em; max-width: 60ch; }
+
+/* --- hyperdomaines ------------------------------------------------------------------------------- */
+.hyper { display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: .15rem .6rem; align-items: baseline; margin: 0 0 1.2rem; }
+.hyper label { font-weight: 700; }
+.hyper input { border: 0; border-bottom: 1px solid var(--gris); background: none; padding: .15rem 0; font-size: 1.1rem; }
+.hyper input:focus { outline: none; border-bottom: 1.5px solid var(--encre); }
+.hyper p { grid-column: 2; margin: 0; font-style: italic; color: var(--gris); }
+.ecart-texte { color: var(--ecart); }
+
+/* --- journal ---------------------------------------------------------------------------------- */
+.ecarts { padding-left: 1.2rem; max-width: 75ch; }
+.ecarts li { margin-bottom: .5rem; }
+.ecarts strong { color: var(--ecart); }
+.conforme { font-style: italic; }
+.export { margin: 0 0 2rem; }
+
+/* --- corpus ---------------------------------------------------------------------------------- */
+.modes, .filtre { display: flex; flex-wrap: wrap; gap: .2rem 1.5rem; margin: 0 0 1.4rem; border-bottom: 1px solid var(--trait); }
+.modes a, .filtre a { color: var(--gris); text-decoration: none; padding: .25rem 0; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.modes a:hover, .filtre a:hover { color: var(--encre); }
+.modes a[aria-current="page"], .filtre a[aria-current="page"] { color: var(--encre); font-weight: 700; border-bottom-color: var(--encre); }
+.chargement { margin-bottom: 2.4rem; }
+.chargement > :first-child, .chargement form > p:first-child { margin-top: 0; }
+.chargement label.fichier { display: block; margin: .6rem 0; font-weight: 700; }
+.chargement label.fichier input { font-weight: 400; margin-left: .4rem; }
+.exemples { display: grid; }
+.exemple { display: grid; grid-template-columns: 1.6rem 1fr; align-items: start; padding: .7rem 0; border-bottom: 1px solid var(--trait); cursor: pointer; }
+.exemple input { margin: .35rem 0 0; accent-color: var(--encre); }
+.exemples button { justify-self: start; margin-top: 1rem; }
+.exemple strong { display: block; color: var(--encre); }
+.exemple span { color: var(--gris); }
+.cartes-discours { display: grid; gap: 1.2rem; }
+.carte-discours { min-width: 0; margin: 0; padding: .4rem 0 .3rem; border: 0; border-top: 1px solid var(--encre); }
+.carte-discours legend { padding: 0 .5rem 0 0; font-weight: 700; }
+.textes label, .fichiers-discrets { display: block; font-style: italic; margin-bottom: .3rem; }
+.textes input[name="nom"] { border: 0; border-bottom: 1px solid var(--gris); background: none; margin-left: .4rem; font-style: normal; }
+.carte-discours .champ-texte { margin-top: .5rem; }
+.pied-carte-discours { display: flex; justify-content: space-between; align-items: center; min-height: 1.6rem; }
+.pied-carte-discours output { color: var(--gris); font-size: .9em; font-style: italic; }
+.retirer-discours { font-size: 1.2rem; line-height: 1; text-decoration: none !important; }
+.ajouter-discours { margin: .8rem 0; padding: .35rem .9rem; border: 1px dashed var(--encre); border-radius: 0; background: none; cursor: pointer; }
+.ajouter-discours:hover { background: var(--teinte); }
+.ajout-sans-js { margin: .7rem 0; }
+.fichiers-discrets { margin: .9rem 0; }
+.fichiers-discrets input { margin-left: .4rem; font-style: normal; max-width: 100%; }
+pre.listing { font: 13.5px/1.6 var(--listing); border-left: 2px solid var(--trait); padding: .2rem .8rem; overflow-x: auto; }
+.charge h2 { font: 700 1.3rem/1.25 var(--titre); margin: 1.8rem 0 .5rem; padding-bottom: .25rem; border-bottom: 1px solid var(--trait); }
+
+/* corpus chargé : chiffres en ligne et liste des discours */
+.corpus-charge { margin-top: .4rem; }
+.resume-corpus { display: flex; flex-wrap: wrap; gap: .4rem 2.4rem; margin: 0 0 1.2rem; }
+.resume-carte .label { display: block; font-style: italic; color: var(--gris); }
+.resume-carte strong { display: block; font: 700 1.7rem/1.15 var(--titre); }
+.resume-carte strong.source-corpus { font-size: 1.05rem; padding-top: .45rem; }
+.liste-discours { list-style: none; margin: 0 0 1rem; padding: 0; border-top: 1px solid var(--encre); max-width: 60rem; }
+.liste-discours li { display: grid; grid-template-columns: minmax(7rem, max-content) 3rem minmax(0, 1fr); align-items: baseline; gap: .8rem;
+  padding: .3rem 0; border-bottom: 1px solid var(--trait); }
+.nom-discours { font: 700 .95rem var(--listing); }
+.taille-discours { color: var(--gris); text-align: right; font-variant-numeric: tabular-nums; }
+.extrait-discours { color: var(--gris); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.resume-corpus-ligne { margin: 0 0 .3rem; font-style: italic; color: var(--gris); }
+.alerte-corpus { margin: .25rem 0 .7rem; color: var(--ecart); font-style: italic; }
+.actions-corpus { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem 1.4rem; margin-top: .5rem; }
+.actions-corpus form, .reset-corpus { margin: 0; }
+.textes-bruts { margin: 1rem 0; border-top: 1px solid var(--trait); border-bottom: 1px solid var(--trait); }
+.textes-bruts summary { padding: .6rem 0; }
+.textes-bruts section { margin: .7rem 0 1rem; }
+.textes-bruts h3 { margin: 0 0 .3rem; font-size: 1rem; }
+.textes-bruts pre { margin: 0; padding: .2rem 0 .2rem .8rem; border-left: 2px solid var(--trait); white-space: pre-wrap;
+  overflow-wrap: anywhere; font: 14px/1.55 var(--listing); }
+
+/* --- linguiste et propositions ------------------------------------------------------------------ */
+.lecture { margin-top: 2rem; }
+.phrase-lecture, .proposition-phrase { padding: 1rem 0; border-top: 1px solid var(--trait); }
+.phrase-lecture-entete, .proposition-phrase > header { display: grid; grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr);
+  gap: .7rem 1rem; align-items: baseline; }
+.phrase-lecture-entete p, .proposition-phrase > header p { margin: 0; font-weight: 700; }
+.identifiant { color: var(--gris); font: .85rem var(--listing); }
+.propositions-discours { margin-top: 1.8rem; }
+.propositions-discours > h2 { font: 700 1.35rem/1.3 var(--titre); border-bottom: 1px solid var(--encre); padding-bottom: .2rem; }
+.propositions-liste { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 1rem 2rem;
+  margin: .8rem 0 0 min(12rem, 10vw); }
+.proposition-carte { padding: .1rem 0 .1rem 1rem; border-left: 2px solid var(--encre); min-width: 0; }
+.proposition-carte h3 { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .6rem; margin: 0 0 .5rem; font: 700 1.05rem/1.3 var(--titre); }
+.proposition-carte h3 small { color: var(--gris); font-size: .85rem; font-weight: 400; font-style: italic; }
+.proposition-carte dl { display: grid; grid-template-columns: minmax(6.5rem, auto) minmax(0, 1fr); gap: .2rem .7rem; margin: 0; }
+.proposition-carte dt { font-style: italic; color: var(--gris); }
+.proposition-carte dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.proposition-elements { margin: 0; padding-left: 1.2rem; }
+.badge-linguiste { margin-left: .35rem; font-size: .85rem; font-weight: 400; font-style: italic; }
+.badge-linguiste::before { content: "["; }
+.badge-linguiste::after { content: "]"; }
+.lecture-interpretee { margin: .7rem 0; padding: .1rem 0 .1rem 1rem; border-left: 2px solid var(--trait); overflow-wrap: anywhere; }
+.suggestions { display: grid; gap: .9rem; margin: .8rem 0 0 min(12rem, 10vw); }
+.suggestion { padding: .1rem 0 .1rem 1rem; border-left: 2px solid var(--encre); min-width: 0; }
+.suggestion-refusee { border-left-color: var(--trait); color: var(--gris); }
+.suggestion-entete, .actions-suggestion { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; }
+.type-suggestion { font-style: italic; color: var(--gris); }
+.etat-suggestion { font-weight: 700; }
+.etat-suggestion.refusee { font-weight: 400; font-style: italic; color: var(--gris); }
+.decision-proposee { margin: .5rem 0; font-weight: 700; }
+.raison-suggestion { margin: .4rem 0 .7rem; color: var(--gris); font-style: italic; }
+.actions-suggestion { justify-content: flex-start; }
+.actions-suggestion form { margin: 0; }
+.actions-suggestion button { margin: 0; }
+.modifier-suggestion { margin: 0; padding: 0; border: 0; }
+.form-correction-suggestion { display: grid; gap: .75rem; margin-top: .8rem; padding: .8rem 0 .8rem 1rem; border-left: 1px solid var(--trait); }
+.choix-antecedents { display: grid; gap: .35rem; max-height: 15rem; overflow: auto; margin: 0; padding: .5rem; border: 1px solid var(--trait); }
+.choix-antecedents label { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: .5rem; }
+.choix-antecedents label span { display: grid; gap: .1rem; }
+.choix-antecedents small { color: var(--gris); }
+.champ-correction { display: grid; gap: .25rem; }
+.champ-correction select, .champ-correction textarea { width: 100%; }
+.form-correction-suggestion .principal { justify-self: start; }
+.phrase-verification { margin: .6rem 0 0; }
+.phrase-verification button { margin: 0; }
+.phrase-verifiee { font-weight: 700; }
+
+/* --- panneau des réglages ---------------------------------------------------------------------- */
+dialog.panneau { margin: 0 0 0 auto; height: 100vh; max-height: none; width: min(34rem, 100vw); padding: 0; border: 0;
+  border-left: 1px solid var(--encre); background: var(--feuille); color: var(--encre); }
+dialog.panneau::backdrop { background: rgba(0, 0, 0, .25); }
+.panneau form { padding: 1.3rem 1.8rem 2rem; }
+.panneau header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--encre); padding-bottom: .4rem; }
+.panneau h2 { font: 700 1.5rem/1.2 var(--titre); margin: 0; }
+.panneau .fermer { background: none; border: 0; font-size: 1.6rem; line-height: 1; cursor: pointer; }
+.panneau .intro { font-style: italic; color: var(--gris); }
+.panneau fieldset { border: 0; border-top: 1px solid var(--trait); padding: .8rem 0 .2rem; margin: 1.2rem 0 0; }
+.panneau legend { font-weight: 700; font-size: 1.05rem; padding-right: .6rem; }
+.panneau .champ { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin: .6rem 0 .1rem; }
+.panneau input[type="number"] { width: 5.5rem; text-align: right; }
+.panneau input.ecart { border-color: var(--ecart); color: var(--ecart); font-weight: 700; }
+.panneau .choix { display: flex; flex-wrap: wrap; gap: .3rem 1.2rem; margin: .8rem 0 .1rem; }
+.panneau .choix span { width: 100%; }
+.panneau .case { display: block; margin: .9rem 0 .1rem; }
+.panneau input[type="radio"], .panneau input[type="checkbox"] { accent-color: var(--encre); }
+.panneau .aide { font-size: .9rem; color: var(--gris); margin: .1rem 0 .4rem; }
+.panneau .aide em { font-style: normal; color: var(--encre); }
+table.poids { border-collapse: collapse; margin: .4rem 0 .6rem; font-size: .85rem; }
+.poids th { font-weight: 700; padding: .1rem .2rem; text-align: center; }
+.poids td { padding: .1rem; text-align: center; color: var(--gris-clair); }
+.poids input[type="number"] { width: 2.9rem; padding: .1rem .2rem; text-align: center; }
+.panneau footer { display: flex; flex-wrap: wrap; gap: .6rem 1.4rem; align-items: center; margin-top: 1.4rem; padding-top: 1rem;
+  border-top: 1px solid var(--encre); }
+.panneau footer button:not(.principal) { background: none; border: 0; padding: 0; cursor: pointer;
+  text-decoration: underline; text-decoration-color: var(--gris-clair); text-underline-offset: .2em; }
+
+/* --- anaphores rétablies (I7) ------------------------------------------------------------------- */
+.anaphores { margin-top: 2.2rem; }
+.anaphores h2 { font: 700 1.35rem/1.2 var(--titre); margin: 0 0 .4rem; }
+.donnees.anaphores small { color: var(--gris); }
+.donnees.anaphores tr.a-verifier td:last-child { color: var(--ecart); font-weight: 700; }
+
+/* --- regroupements ---------------------------------------------------------------------------- */
+form.regroupement { display: flex; flex-wrap: wrap; gap: .8rem 1.4rem; align-items: end; margin: 0 0 1.4rem; }
+form.regroupement label { display: flex; flex-direction: column; gap: .2rem; font-style: italic; }
+form.regroupement input, form.regroupement select { width: 7rem; font-style: normal; }
+.aide-regroupements { margin: 1rem 0 1.6rem; padding: .1rem 0 .1rem 1rem; border-left: 2px solid var(--encre); max-width: 75ch; }
+.aide-regroupements h3 { margin: 0 0 .3rem; font-size: 1rem; }
+.aide-regroupements ol { margin: .3rem 0; padding-left: 1.3rem; }
+.aide-regroupements p { margin: .45rem 0 0; font-style: italic; }
+.dendrogramme { font: 12px var(--listing); }
+.dendrogramme .branche { fill: none; stroke: var(--gris-clair); stroke-width: 1.3; }
+.dendrogramme .branche.hors-groupe { opacity: .5; }
+.dendrogramme .branche[class*="groupe-"] { stroke-width: 2.2; }
+.dendrogramme .coupe { stroke: var(--encre); stroke-dasharray: 4 3; fill: var(--encre); }
+.dendrogramme text.coupe { stroke: none; font-size: 11px; }
+.dendrogramme .axe { fill: var(--gris); font-size: 11px; }
+.dendrogramme .feuille { fill: var(--encre); }
+.dendrogramme .feuille.hors-groupe { fill: var(--gris); }
+/* les groupes gardent des couleurs : elles portent du sens (même couleur = même groupe) */
+.dendrogramme .branche.groupe-1 { stroke: #2864a5; fill: none; }
+.dendrogramme .feuille.groupe-1 { fill: #2864a5; }
+.dendrogramme .branche.groupe-2 { stroke: #bd4f19; fill: none; }
+.dendrogramme .feuille.groupe-2 { fill: #bd4f19; }
+.dendrogramme .branche.groupe-3 { stroke: #477a38; fill: none; }
+.dendrogramme .feuille.groupe-3 { fill: #477a38; }
+.dendrogramme .branche.groupe-4 { stroke: #8b5ca8; fill: none; }
+.dendrogramme .feuille.groupe-4 { fill: #8b5ca8; }
+.dendrogramme .branche.groupe-5 { stroke: #a23f5c; fill: none; }
+.dendrogramme .feuille.groupe-5 { fill: #a23f5c; }
+.dendrogramme .branche.groupe-6 { stroke: #168080; fill: none; }
+.dendrogramme .feuille.groupe-6 { fill: #168080; }
+.dendrogramme .branche.groupe-7 { stroke: #946b14; fill: none; }
+.dendrogramme .feuille.groupe-7 { fill: #946b14; }
+.dendrogramme .branche.groupe-8 { stroke: #5969a5; fill: none; }
+.dendrogramme .feuille.groupe-8 { fill: #5969a5; }
+.domaine[class*="groupe-cah-"] { border-left: 3px solid var(--gris-clair); padding-left: .8rem; }
+.domaine.groupe-cah-1 { border-color: #2864a5; }
+.domaine.groupe-cah-2 { border-color: #bd4f19; }
+.domaine.groupe-cah-3 { border-color: #477a38; }
+.domaine.groupe-cah-4 { border-color: #8b5ca8; }
+.domaine.groupe-cah-5 { border-color: #a23f5c; }
+.domaine.groupe-cah-6 { border-color: #168080; }
+.domaine.groupe-cah-7 { border-color: #946b14; }
+.domaine.groupe-cah-8 { border-color: #5969a5; }
+.arbre-regroupements { margin-top: 1rem; padding-top: .8rem; border-top: 1px solid var(--trait); }
+.comparaison-regroupements { margin-top: 1rem; }
+
+/* --- écrans moyens ---------------------------------------------------------------------------- */
+@media (min-width: 961px) and (max-width: 1500px) {
+  .cote-a-cote.relations { grid-template-columns: minmax(0, 1fr); }
+  .relations .version, .relations .version + .version { padding: 0; border-left: 0; }
+  .relations .version + .version { padding-top: 1.5rem; margin-top: 1rem; }
+}
+@media (max-width: 1100px) {
+  .marque small { display: none; }
+}
+
+/* --- petits écrans ---------------------------------------------------------------------------- */
+@media (max-width: 960px) {
+  .bandeau { flex-wrap: wrap; gap: .5rem 1.2rem; padding: .7rem 1rem; position: static; }
+  .corpus-actuel { order: 5; flex: 1 1 100%; white-space: normal; }
+  .versions { margin-left: auto; }
+  .cadre { grid-template-columns: minmax(0, 1fr); }
+  .procedure { padding: .7rem 1rem; border-right: 0; border-bottom: 1px solid var(--trait); overflow-x: auto; }
+  .procedure h2, .legende-etapes { display: none; }
+  .procedure ol { display: flex; gap: .9rem; position: static; width: max-content; }
+  .procedure li::after { display: none; }
+  .procedure a { margin: 0; grid-template-columns: 1.4rem auto auto; }
+  main { padding: 1.3rem 1rem 3rem; }
+  .cote-a-cote { grid-template-columns: minmax(0, 1fr); }
+  .version, .version + .version { padding: 0; border-left: 0; }
+  .version + .version { padding-top: 1.5rem; margin-top: 1rem; }
+  .entete h1 { font-size: 1.7rem; }
+  .phrase-lecture-entete, .proposition-phrase > header { grid-template-columns: minmax(0, 1fr); gap: .2rem; }
+  .propositions-liste, .suggestions { margin-left: 0; }
+  .proposition-carte dl { grid-template-columns: 1fr; gap: 0; }
+  .liste-discours li { grid-template-columns: auto auto; }
+  .extrait-discours { grid-column: 1 / -1; }
+  .actions-globales > .principal { margin-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-status:not([hidden])::before { animation: none; }
+}

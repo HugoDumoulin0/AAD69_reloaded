@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "macros.html" import versions %}
+{% block titre %}Hyperdomaines{% endblock %}
+{% block contenu %}
+<header class="entete">
+  <h1>Hyperdomaines</h1>
+  <p>Les domaines qui partagent des origines se regroupent, de proche en proche, en hyperdomaines. Pêcheux leur
+    donne ensuite un nom selon leur fonction dans le discours : naissance, réception de l'ordre, combat
+    (annexe III, p. 126). Ce nom est une interprétation : écrivez-le ici, il sera repris dans l'export.</p>
+</header>
+
+<form method="post" action="{{ url_for('hyperdomaines_noms') }}">
+{% call(v, res) versions(resultats) %}
+  {% if v == '1972' %}<p class="source">Extension : le manuel de 1972 ne parle pas d'hyperdomaines.</p>{% endif %}
+  {% set noms = etat.noms_hyper.get(v, {}) %}
+  {% for h in res.hyperdomaines %}
+    <div class="hyper">
+      <label for="nom_{{ v }}_{{ h.numero }}">H{{ h.numero }}</label>
+      <input id="nom_{{ v }}_{{ h.numero }}" name="nom_{{ v }}_{{ h.numero }}" value="{{ noms.get(h.numero, '') }}" placeholder="Nom de l'hyperdomaine">
+      <p>{% if h.domaines|length == 1 %}Domaine {{ h.domaines[0] }}, seul.
+        {% else %}Domaines {{ h.domaines|join(', ') }}.{% endif %}
+        {% if h.domaines|length == 1 %}
+        {% elif h.origine_commune %}Origines communes à tous : {{ h.origine_commune|sort|join(', ') }}.
+        {% else %}<span class="ecart-texte">Aucune origine commune à tous : la lecture stricte du texte n'est pas vérifiée (H1).</span>{% endif %}</p>
+    </div>
+  {% else %}
+    <p class="vide">Aucun hyperdomaine : pas de domaine, ou option désactivée pour 1972.</p>
+  {% endfor %}
+{% endcall %}
+{% if resultats.values()|map(attribute='hyperdomaines')|select|list %}<button class="principal">Enregistrer les noms</button>{% endif %}
+</form>
+{% endblock %}

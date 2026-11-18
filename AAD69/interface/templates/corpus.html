@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block titre %}Corpus{% endblock %}
+{% block contenu %}
+{% macro carte_discours(numero) %}
+  <fieldset class="texte carte-discours" data-carte-discours>
+    <legend data-titre-carte>Discours {{ numero }}</legend>
+    <label>Nom du discours <input name="nom" value="discours-{{ numero }}"></label>
+    <label class="champ-texte">Texte du discours
+      <textarea name="texte" rows="8" aria-label="Texte du discours {{ numero }}" placeholder="Ex. : Le chat dort."></textarea>
+    </label>
+    <div class="pied-carte-discours">
+      <output data-compteurs hidden>0 phrases · 0 mots</output>
+      <button type="button" class="retirer-discours discret" data-retirer-discours hidden aria-label="Retirer ce discours">×</button>
+    </div>
+  </fieldset>
+{% endmacro %}
+
+<header class="entete entete-corpus">
+  <h1>Corpus</h1>
+  <p>Un discours est un texte produit par un locuteur : une réponse, un récit, un tract. AAD69 compare des discours
+    différents, produits dans les mêmes conditions. Il en faut au moins deux pour obtenir des zones de similitude.</p>
+</header>
+
+<nav class="modes" aria-label="Façon de charger le corpus">
+  {% if mode_developpement %}
+    <a href="{{ url_for('corpus', mode='exemples') }}"{% if mode == 'exemples' %} aria-current="page"{% endif %}>Références (développement)</a>
+  {% endif %}
+  {% for cle, libelle in [('textes', 'Saisir ou ajouter des textes'), ('conllu', 'Corpus déjà analysé (CoNLL-U)'), ('tables', 'Tables CSV')] %}
+    <a href="{{ url_for('corpus', mode=cle, modifier='1') if etat.a_un_corpus else url_for('corpus', mode=cle) }}"{% if mode == cle %} aria-current="page"{% endif %}>{{ libelle }}</a>
+  {% endfor %}
+</nav>
+
+{% if etat.a_un_corpus and not modifier %}
+<section class="corpus-charge" aria-label="Corpus chargé">
+  <div class="resume-corpus">
+    <div class="resume-carte"><span class="label">Discours</span><strong>{{ resume.discours }}</strong></div>
+    <div class="resume-carte"><span class="label">{{ 'Énoncés' if etat.tables else 'Phrases' }}</span><strong>{{ resume.phrases_ou_enonces }}</strong></div>
+    <div class="resume-carte large"><span class="label">Source</span><strong class="source-corpus">{{ resume.source }}</strong></div>
+  </div>
+  <ul class="liste-discours">
+    {% for nom, taille, extrait in etat.discours() %}
+      <li><span class="nom-discours">{{ nom }}</span><span class="taille-discours">{{ taille }}</span>{% if extrait %}<span class="extrait-discours">{{ extrait }}</span>{% endif %}</li>
+    {% endfor %}
+  </ul>
+  <p class="resume-corpus-ligne">
+    Corpus chargé : {{ resume.discours }} discours · {{ resume.phrases_ou_enonces }}
+    {% if etat.tables %}énoncés, importé depuis des tables.
+    {% elif etat.source.endswith('textes analysés par Stanza') %}phrases, analysé par Stanza.
+    {% else %}phrases, importé ou chargé en CoNLL-U.{% endif %}
+  </p>
+  {% if resume.discours < 2 %}<p class="alerte-corpus">Un seul discours : il n'y aura aucune zone de similitude.</p>{% endif %}
+  <div class="actions-corpus">
+    <a class="discret" href="{{ url_for('corpus', mode='textes', modifier='1') }}">← Modifier ou ajouter des textes</a>
+    <form method="post" action="{{ url_for('corpus_reinitialiser') }}" class="reset-corpus">
+      <button type="submit" class="discret">Réinitialiser le corpus</button>
+    </form>
+  </div>
+</section>
+{% else %}
+<div class="chargement">
+{% if mode == 'exemples' and mode_developpement %}
+  <form method="post" action="{{ url_for('corpus_exemple') }}" class="exemples">
+    {% for cle, (nom, description) in exemples.items() %}
+      <label class="exemple">
+        <input type="radio" name="exemple" value="{{ cle }}"{% if loop.first %} checked{% endif %}>
+        <span><strong>{{ nom }}</strong>{{ description }}</span>
+      </label>
+    {% endfor %}
+    <button class="principal">Charger l'exemple</button>
+  </form>
+
+{% elif mode == 'textes' %}
+  {% if not stanza %}
+    <p class="message erreur">Stanza n'est pas installé dans cet environnement. Pour l'installer :
+      <code>pip install stanza</code>, puis une fois <code>python -c "import stanza; stanza.download('fr')"</code>.
+      Sinon, chargez des fichiers CoNLL-U ou des tables.</p>
+  {% endif %}
+  <p class="note">Tu peux copier-coller tes textes ou téléverser un ou plusieurs fichiers texte. Les champs et fichiers vides sont ignorés ; donne un nom différent à chaque discours.</p>
+  <form method="post" action="{{ url_for('corpus_textes') }}" class="textes" enctype="multipart/form-data" data-form-textes data-loading-message="Analyse en cours… Stanza traite les discours un par un. La page se mettra à jour à la fin.">
+    <div class="cartes-discours" data-cartes-discours>
+    {% for i in range(nb_textes) %}
+      {{ carte_discours(i + 1) }}
+    {% endfor %}
+    </div>
+    <template data-modele-carte-discours>{{ carte_discours('__NUMERO__') }}</template>
+    <button type="button" class="ajouter-discours" data-ajouter-discours hidden>＋ Ajouter un discours</button>
+    <p class="lien-sobre ajout-sans-js"><a href="{{ url_for('corpus', mode='textes', n=nb_textes + 1) }}">Ajouter un discours</a></p>
+    <label class="fichiers-discrets">…ou ajouter des fichiers texte (un fichier par discours)
+      <input type="file" name="fichiers" accept=".txt,.md,.csv,.tsv" multiple>
+    </label>
+    <div class="actions-ligne">
+      <button class="principal"{% if not stanza %} disabled{% endif %}>Analyser avec Stanza et charger</button>
+      <button type="button" class="secondaire" data-vide-textes>Vider les textes et fichiers</button>
+    </div>
+    <p class="loading-status" id="loading-status" role="status" aria-live="polite" aria-atomic="true" hidden></p>
+  </form>
+
+{% elif mode == 'conllu' %}
+  <form method="post" action="{{ url_for('corpus_conllu') }}" enctype="multipart/form-data">
+    <p>Un fichier par discours ; le nom du fichier devient le nom du discours.</p>
+    <input type="file" name="fichiers" accept=".conllu,.txt" multiple>
+    <button class="principal">Charger</button>
+  </form>
+
+{% else %}
+  <form method="post" action="{{ url_for('corpus_tables') }}" enctype="multipart/form-data">
+    <p>Énoncés et relations établis à la main, comme dans le livre. Les numéros d'énoncés sont uniques sur
+      tout le corpus (décision I1).</p>
+    <pre class="listing exemple-format">indice,F,D1,N1,V,ADV,PP,D2,N2_3,discours
+5,F3,Ø,J,aller,Ø,Ø,Ø,Ø,recit-a</pre>
+    <pre class="listing exemple-format">E_i,operateur,E_j
+5,phi2,6</pre>
+    <label class="fichier">Énoncés <input type="file" name="enonces" accept=".csv"></label>
+    <label class="fichier">Relations <input type="file" name="relations" accept=".csv"></label>
+    <button class="principal">Charger</button>
+  </form>
+{% endif %}
+</div>
+
+{% if modifier and etat.a_un_corpus %}
+  <p class="lien-sobre"><a href="{{ url_for('corpus') }}">← Retour au corpus chargé</a></p>
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block titre %}Propositions{% endblock %}
+{% block contenu %}
+<header class="entete">
+  <h1>Repères de propositions</h1>
+  <p>Cette vue descriptive rend visibles les prédicats et leurs dépendances dans l’arbre CoNLL-U.
+    Elle tient compte des rattachements du Linguiste appliqués, mais ne constitue pas une nouvelle
+    analyse et ne modifie ni les énoncés ni les scores.</p>
+</header>
+
+{% if not etat.phrases %}
+  <p class="note">Ce corpus contient déjà des tables d’énoncés et de relations ; il n’y a pas d’arbre de phrases à afficher.</p>
+{% else %}
+  <p class="note">Les identifiants entre parenthèses sont les numéros des mots dans la phrase.
+    Un sujet indiqué comme hérité est repris du prédicat dont dépend ce verbe. Les verbes non finis
+    apparaissent aussi lorsqu’ils sont des prédicats dans l’arbre.</p>
+  {% for bloc in blocs %}
+  <section class="propositions-discours" aria-labelledby="propositions-{{ loop.index }}">
+    <h2 id="propositions-{{ loop.index }}">{{ bloc.nom }}</h2>
+    {% for groupe in bloc.phrases %}
+    <article class="proposition-phrase" id="phrase-{{ groupe.phrase.sent_id }}">
+      <header>
+        <span class="identifiant listing">{{ groupe.phrase.sent_id }}</span>
+        <p>{{ groupe.phrase.texte }}</p>
+      </header>
+      {% if groupe.propositions %}
+        <div class="propositions-liste">
+        {% for p in groupe.propositions %}
+          <section class="proposition-carte">
+            <h3>
+              <span class="listing">{{ p.mot.forme }}</span>
+              <small>{{ p.type }} · mot {{ p.mot.id }}{% if p.mode %} · {{ p.mode }}{% endif %}</small>
+              {% if p.mot.corrige_par_linguiste %}<span class="badge-linguiste">rattachement Linguiste appliqué</span>{% endif %}
+            </h3>
+            <dl>
+              <dt>Position dans l’arbre</dt>
+              <dd>
+                {% if p.parent %}
+                  {{ p.relation }} de « {{ p.parent.forme }} » (mot {{ p.parent.id }})
+                {% elif p.tete_syntaxique %}
+                  {{ p.relation }} de « {{ p.tete_syntaxique.forme }} » (mot {{ p.tete_syntaxique.id }})
+                {% else %}
+                  racine
+                {% endif %}
+              </dd>
+              <dt>Sujet</dt>
+              <dd>
+                {% if p.sujet %}
+                  {{ p.sujet.forme }} (mot {{ p.sujet.id }}){% if p.sujet.heritage %} — hérité{% endif %}
+                  {% if p.sujet.corrige_par_linguiste %}<span class="badge-linguiste">rattachement Linguiste appliqué</span>{% endif %}
+                {% else %}non identifié dans l’arbre{% endif %}
+              </dd>
+              {% if p.complements %}
+              <dt>Compléments</dt>
+              <dd><ul class="proposition-elements">
+                {% for c in p.complements %}
+                  <li>{{ c.type }}{% if c.preposition %} ({{ c.preposition }}){% endif %} :
+                    <span class="listing">{{ c.forme }}</span> (mot {{ c.id }}, {{ c.relation }})
+                    {% if c.corrige_par_linguiste %}<span class="badge-linguiste">rattachement Linguiste appliqué</span>{% endif %}
+                  </li>
+                {% endfor %}
+              </ul></dd>
+              {% endif %}
+              {% if p.propositions_liees %}
+              <dt>Prédicats liés</dt>
+              <dd><ul class="proposition-elements">
+                {% for liee in p.propositions_liees %}
+                  <li>{{ liee.type }} : <span class="listing">{{ liee.forme }}</span>
+                    (mot {{ liee.id }}, {{ liee.relation }})
+                    {% if liee.corrige_par_linguiste %}<span class="badge-linguiste">rattachement Linguiste appliqué</span>{% endif %}
+                  </li>
+                {% endfor %}
+              </ul></dd>
+              {% endif %}
+            </dl>
+          </section>
+        {% endfor %}
+        </div>
+      {% else %}
+        <p class="vide">Aucun prédicat identifié.</p>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </section>
+  {% endfor %}
+{% endif %}
+{% endblock %}

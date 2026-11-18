@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "macros.html" import versions, paradigme, chiffres, tableau %}
+{% block titre %}Domaines{% endblock %}
+{% block contenu %}
+<header class="entete">
+  <h1>Domaines</h1>
+  <p>Les termes rangés dans une même colonne se substituent les uns aux autres d'un discours à l'autre, sur un
+    fond commun. Pêcheux écrit chaque domaine ainsi, entre barres verticales (annexe III, p. 125).</p>
+</header>
+
+{% call(v, res) versions(resultats) %}
+  {% if v == '1969' %}
+    <p class="source">Le livre : chaînes de zones, puis homogénéité (Alg. 3 à 5).</p>
+    {{ chiffres([(res.zones|length, 'zones'), (res.chaines|length, 'chaînes'), (res.domaines|length, 'domaines')]) }}
+  {% else %}
+    <p class="source">Le manuel : quadruplets reliés par transitivité (§ 3.22).</p>
+    {{ chiffres([(res.zones|length, 'quadruplets'), (res.domaines|length, 'domaines')]) }}
+    <p class="coef">Homogénéité {{ res.coefficient|nombre }}
+      <span class="barre" aria-hidden="true"><span style="width: {{ (res.coefficient * 100)|round(1) }}%"></span></span><br>
+      quadruplets formés sur paires de relations comparées (manuel, p. 45)</p>
+  {% endif %}
+
+  {% for d in tables.paradigmes(res) %}{{ paradigme(d) }}{% else %}
+    <p class="vide">Aucun domaine : aucune zone de similitude avec ces réglages.</p>
+  {% endfor %}
+
+  {% if v == '1969' and res.chaines %}
+    <details><summary>Les {{ res.chaines|length }} chaînes</summary>
+      {{ tableau(tables.table_chaines(res), listing=['couples', 'séquences']) }}
+    </details>
+  {% endif %}
+  {% if res.domaines %}
+    <details><summary>Détail des domaines</summary>
+      {{ tableau(tables.table_domaines(res), listing=['F', 'D1', 'N1', 'V', 'ADV', 'PP', 'D2', 'N2_3', 'énoncé gauche', 'énoncé droit']) }}
+    </details>
+  {% endif %}
+{% endcall %}
+{% endblock %}

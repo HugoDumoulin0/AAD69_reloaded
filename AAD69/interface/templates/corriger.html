@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block titre %}Corriger l'énoncé {{ original.indice }}{% endblock %}
+{% block contenu %}
+<header class="entete">
+  <h1>Corriger l'énoncé {{ original.indice }}</h1>
+  <p>Version {{ version }}, discours {{ original.discours }}. La colonne de gauche garde ce que l'extraction automatique
+    a produit ; seules les cases que vous changez sont enregistrées comme corrections (décision I6).
+    Une case laissée vide vaut Ø.</p>
+</header>
+
+{% if phrase %}<blockquote class="phrase">{{ phrase }}</blockquote>{% endif %}
+
+<form method="post" action="{{ url_for('enonce_enregistrer', version=version, indice=original.indice) }}" class="correction v{{ version[2:] }}">
+  <input type="hidden" name="discours" value="{{ request.args.get('discours', '') }}">
+  <table class="donnees">
+    <thead><tr><th scope="col">case</th><th scope="col">extraction automatique</th><th scope="col">valeur retenue</th></tr></thead>
+    <tbody>
+      {% for c in cases %}
+        <tr><th scope="row">{{ c.replace('N2_3', 'N2/3') }}</th>
+          <td class="listing">{{ original[c] }}</td>
+          <td><input name="{{ c }}" value="{{ correction.get(c, original[c]) }}" class="listing{{ ' corrige' if c in correction }}" aria-label="{{ c }}"></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="actions">
+    <button class="principal" name="action" value="enregistrer">Enregistrer</button>
+    {% if correction %}<button name="action" value="annuler" class="discret">Revenir à l'extraction automatique</button>{% endif %}
+    <a href="{{ url_for('enonces') }}#e{{ version }}-{{ original.indice }}">Retour aux énoncés</a>
+  </p>
+</form>
+{% endblock %}

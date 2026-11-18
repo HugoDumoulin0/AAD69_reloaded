@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "macros.html" import versions, tableau %}
+{% block titre %}Relations{% endblock %}
+{% block contenu %}
+<header class="entete">
+  <h1>Relations entre énoncés</h1>
+  <p>Chaque discours devient un graphe : les énoncés sont reliés par des opérateurs. En 1969, δ1 et δ2 marquent
+    la détermination du sujet ou du complément, φ1 à φ6 les connecteurs (lorsque, point, et, deux-points, si… que),
+    φα l'ordre. En 1972, les codes 01 à 99 de l'annexe 2 du manuel.</p>
+  <p class="note">Une ligne « à vérifier » garde le codage prudent de Stanza (α/08). Vérifie manuellement si le complément
+    en « à » désigne un lieu ou un destinataire avant d'utiliser cette relation.</p>
+</header>
+
+<nav class="filtre" aria-label="Discours">
+  {% for nom in discours %}<a href="{{ url_for('relations', discours=nom) }}"{% if nom == choisi %} aria-current="page"{% endif %}>{{ nom }}</a>{% endfor %}
+</nav>
+
+{% call(v, res) versions(resultats, 'relations') %}
+  <div class="defile graphe-cadre">{{ graphes[v]|safe }}</div>
+  {% set lignes = tables.table_relations(res)|selectattr('discours', 'equalto', choisi)|list %}
+  <h3 class="sous-titre">{{ lignes|length }} relations dans « {{ choisi }} »</h3>
+  {{ tableau(lignes, listing=['énoncé gauche', 'énoncé droit', 'opérateur'], vide="Aucune relation dans ce discours.") }}
+{% endcall %}
+{% endblock %}

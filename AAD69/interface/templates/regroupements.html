@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "macros.html" import versions, paradigme, chiffres %}
+{% block titre %}Regroupements{% endblock %}
+{% block contenu %}
+<header class="entete">
+  <h1>Regroupements</h1>
+  <p>On rassemble les relations qui se ressemblent. Une relation est une flèche entre deux énoncés,
+    notée par exemple <code>E1 —φ2→ E2</code>. L’arbre montre lesquelles sont réunies ensemble.</p>
+</header>
+
+<form class="regroupement" method="get" action="{{ url_for('regroupements') }}">
+  <label>Lien
+    <select name="lien">
+      {% for l in liens %}<option value="{{ l }}"{% if l == lien %} selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Borne
+    <input name="borne" type="number" step="any" min="0" max="{{ s_max|nombre }}" value="{{ borne|nombre }}">
+  </label>
+  <button class="secondaire" type="submit">Regrouper</button>
+</form>
+
+<aside class="aide-regroupements" aria-label="Comment lire les groupes">
+  <h3>Comment lire</h3>
+  <ol>
+    <li>Chaque ligne à droite est une relation. Les numéros désignent les énoncés reliés par la flèche.</li>
+    <li>Lis l’arbre de gauche à droite : les branches se rejoignent pour former des groupes.</li>
+    <li>La ligne orange est la limite : les branches qui se rejoignent avant la ligne appartiennent au même groupe.</li>
+  </ol>
+  <p>Plus une jonction est à droite, plus il faut accepter une grande différence pour réunir les relations.</p>
+</aside>
+
+{% call(v, res) versions(resultats) %}
+  {% set c = calculs[v] %}
+  {% set a = c.reg.accord_aad %}
+  {{ chiffres([(c.ref.domaines|length, 'domaines AAD69'), (c.reg.groupes|length, 'groupes CAH')]) }}
+  <h3>Groupes retenus</h3>
+  <p class="note">Même couleur = même groupe. Les énoncés sont les colonnes de départ et d’arrivée des flèches.</p>
+  {% for d in tables.paradigmes_groupes(res, c.reg) %}{{ paradigme(d) }}{% else %}
+    <p class="vide">Aucun groupe à cette borne.</p>
+  {% endfor %}
+  <details class="comparaison-regroupements">
+    <summary>Comparer avec les domaines de Pêcheux</summary>
+    <p class="source">
+      À la même limite ({{ c.reg.borne|nombre }}) : précision {{ (a.precision * 100)|round|int }} %,
+      rappel {{ (a.rappel * 100)|round|int }} %
+      ({{ a.communes }} paires communes, {{ a.seulement_reference }} seulement chez Pêcheux,
+      {{ a.seulement_autre }} seulement dans les groupes calculés).
+    </p>
+  </details>
+  {% if c.svg %}
+    <details class="arbre-regroupements">
+      <summary>Voir comment les groupes se forment (arbre, lien {{ c.reg.lien }})</summary>
+      <div class="defile">{{ c.svg|safe }}</div>
+    </details>
+  {% endif %}
+{% endcall %}
+<p class="note">Chaque branche colorée mène à un groupe de même couleur ci-dessus. Les étiquettes courtes
+  donnent les numéros des énoncés ; survole-les pour lire les phrases complètes. La ligne orange marque la limite :
+  seuls les rapprochements faits avant cette ligne sont retenus.</p>
+{% endblock %}
