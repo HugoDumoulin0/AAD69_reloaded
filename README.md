@@ -1,4 +1,4 @@
-# AAD69 — premier prototype
+# AAD69 premier prototype
 
 Ce dépôt présente un premier prototype de réimplémentation de l’algorithme
 d’analyse automatique du discours proposé par Michel Pêcheux en 1969. Le
